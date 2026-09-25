@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790145399797,
+      "tag": "0000_dusty_prima",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790171598577,
+      "tag": "0001_slow_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790247860707,
+      "tag": "0002_redundant_smiling_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790270493689,
+      "tag": "0003_minor_spot",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790278832207,
+      "tag": "0004_acoustic_stepford_cuckoos",
+      "breakpoints": true
+    }
+  ]
+}

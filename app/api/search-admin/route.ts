@@ -1,0 +1,9 @@
+import {env} from 'cloudflare:workers';
+import {z} from 'zod';
+import {actor,sameOrigin} from '@/lib/onboarding';
+import {db} from '@/db';
+import {budgetState} from '@/lib/api-budget';
+import {routerCall} from '@/lib/router-gateway';
+import {privateResponse,quota} from '@/lib/discovery-server';
+export async function GET(){if(!(await actor()).admin)return privateResponse({error:'Нет доступа'},403);return privateResponse({budget:await budgetState(),calls:(await db().prepare('SELECT id,provider,model,reserved,actual,status,data,created_at FROM api_calls ORDER BY created_at DESC LIMIT 100').all()).results});}
+export async function POST(req:Request){if(!(await actor()).admin)return privateResponse({error:'Нет доступа'},403);try{sameOrigin(req);const b=z.object({variant:z.enum(['sonar','plugin','generative','jev']),query:z.string().min(3).max(500)}).parse(await req.json());await quota('global','bench',8);const start=performance.now();const answer=b.variant==='jev'?await routerCall({model:'typesafe/jev-1.13',state:b.query,questions:{intent:{type:'choice',instructions:'Что ищет пользователь?',criteria:{product:'Конкретный товар',service:'Услуга',organization:'Организация',complex:'Сложная закупка'}}}},'decisions'):await routerCall({model:b.variant==='sonar'?'perplexity/sonar':env.ROUTERAI_MODEL||'qwen/qwen3-30b-a3b-instruct-2507',max_tokens:1800,...(b.variant==='plugin'?{plugins:[{id:'web',engine:'exa',max_results:3}]}:{}),messages:[{role:'system',content:'Ищи реальные предложения в Казани, укажи первоисточники. Не выдумывай цены и наличие. При отсутствии веб-инструмента сообщи, что источники не проверены.'},{role:'user',content:b.query}]});return privateResponse({variant:b.variant,ms:performance.now()-start,answer});}catch(e){return privateResponse({error:e instanceof Error?e.message:'Проверка недоступна'},400);}}

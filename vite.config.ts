@@ -1,5 +1,5 @@
 import vinext from "vinext";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import hostingConfig from "./.openai/hosting.json";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { sites } from "./build/sites-vite-plugin";
@@ -35,7 +35,8 @@ const localBindingConfig = {
     : [],
 };
 
-export default defineConfig(async () => {
+export default defineConfig(async ({command,mode}) => {
+  const localEnv=loadEnv(mode,process.cwd(),'');
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
   process.env.WRANGLER_SEND_METRICS ??= "false";
@@ -61,7 +62,7 @@ export default defineConfig(async () => {
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
-        config: localBindingConfig,
+        config: {...localBindingConfig, ...(command==='serve'?{vars:{OVERPASS_URL:localEnv.OVERPASS_URL||'https://overpass-api.de/api/interpreter',ROUTERAI_WEB_MODE:localEnv.ROUTERAI_WEB_MODE||'sonar',ROUTERAI_WEB_MODEL:localEnv.ROUTERAI_WEB_MODEL||'',API_MONTHLY_LIMIT_RUB:localEnv.API_MONTHLY_LIMIT_RUB||'3000',API_MAX_CALL_RUB:localEnv.API_MAX_CALL_RUB||'20',ROUTERAI_API_KEY:localEnv.ROUTERAI_API_KEY||'',ROUTERAI_MODEL:localEnv.ROUTERAI_MODEL||'qwen/qwen3-30b-a3b-instruct-2507',ADMIN_EMAIL:localEnv.ADMIN_EMAIL||process.env.ADMIN_EMAIL||'',AUTH_TRUSTED_PROXY:'1',PHOTON_URL:localEnv.PHOTON_URL||'https://photon.komoot.io',VALHALLA_URL:localEnv.VALHALLA_URL||'https://valhalla1.openstreetmap.de'}}:{})},
       }),
     ],
   };

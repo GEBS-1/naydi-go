@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import {writeFile,mkdir} from 'node:fs/promises';
+const base=process.env.TEST_URL||'http://127.0.0.1:3001';
+if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw new Error('Тест работает только локально');
+const auth=(id,email)=>({'oai-authenticated-user-id':id,'oai-authenticated-user-email':email});
+const admin=auth('qa-admin','qa-admin@example.com'),owner=auth('qa-recipient','owner@example.com'),other=auth('qa-other','other@example.com');
+let checks=0;
+async function call(path,{method='GET',headers={},body,status=200}={}){const r=await fetch(base+path,{method,headers:{...headers,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});const text=await r.text();assert.equal(r.status,status,`${method} ${path}: ${text}`);checks++;return {data:text?JSON.parse(text):null,headers:r.headers};}
+const act=(action,extra={},headers=admin,status=200)=>call('/api/onboarding',{method:'POST',headers,body:{action,...extra},status}).then(r=>r.data);
+const catalog=(action,extra={},headers=other,status=200)=>call('/api/catalog',{method:'POST',headers,body:{action,...extra},status}).then(r=>r.data);
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
+await call('/api/onboarding',{status:403});await act('save',{data:{}},other,403);
+const upload=await fetch(base+'/api/catalog',{method:'PUT',headers:{...admin,'Content-Type':'image/png'},body:png});const uploadData=await upload.json();assert.equal(upload.status,200,JSON.stringify(uploadData));const {url:photo}=uploadData;assert.equal((await fetch(base+photo)).status,404);
+const shop={name:'QA закрытая витрина '+Date.now(),category:'Электроника',city:'Казань',street:'Тестовый адрес, не реальный магазин',phone:'+7 000 000-00-00',lat:55.79,lng:49.12,source:'https://example.com/qa',site:'https://example.com/',photos:[photo],notes:'Только автоматическая локальная проверка',checkedAt:new Date().toISOString()};
+const {id}=await act('save',{data:shop});
+const product={name:'QA гарнитура '+Date.now(),category:'Электроника',brand:'QA',model:'Test',description:'Только локальный тест',features:'Bluetooth',keywords:'наушники',price:1234,quantity:null,stockConfirmed:false,photos:[photo],imagePermission:'Изображение создано тестом: одноцветный PNG',source:'https://example.com/qa-product',checkedAt:new Date().toISOString(),testOnly:true};
+let preview,productId;
+try{
+ ({id:productId}=await act('product',{id,data:product}));
+ assert(!(await call('/api/catalog')).data.stores.some(s=>s.id===id));assert.equal((await catalog('search',{query:product.name})).products.length,0);
+ await catalog('inquiry',{id:productId,question:'Есть?'},other,404);await catalog('favorite',{id:productId},other,404);await catalog('claim',{id,contact:'qa',message:'qa'},other,400);
+ preview=await act('preview',{id});assert.match(preview.path,/^\/preview\/[a-f0-9]{64}$/);const token=preview.path.split('/').pop();
+ const p=await call('/api'+preview.path);assert.equal(p.data.products.length,1);assert.equal(p.data.shop.notes,undefined);assert.equal(p.headers.get('cache-control'),'private, no-store');assert.match(p.headers.get('x-robots-tag'),/noindex/);
+ assert.equal((await fetch(base+photo+'?preview='+token)).status,200);assert.equal((await fetch(base+photo+'?preview='+'a'.repeat(64))).status,404);
+ await act('save',{id,data:{...shop,name:shop.name+' изменено'}});assert.match((await call('/api'+preview.path)).data.shop.name,/изменено/);
+ await act('publish',{id,consent:'Согласие только для локального QA теста'},admin,400);
+ await act('product',{id,data:{...product,id:productId,testOnly:false,price:2190}});
+ await act('publish',{id,consent:''},admin,400);await act('invite',{id,email:'owner@example.com'},admin,400);
+ await act('publish',{id,consent:'Согласие для автоматического локального теста; после проверки снять публикацию.'});
+ let publicProduct=(await catalog('search',{query:product.name})).products.find(p=>p.id===productId);assert(publicProduct);assert.equal(publicProduct.price,2190);assert.equal(publicProduct.stockConfirmed,false);assert.equal(publicProduct.quantity,null);
+ const invite=await act('invite',{id,email:'owner@example.com'});
+ await call('/api'+invite.path,{method:'POST',status:401});await call('/api'+invite.path,{method:'POST',headers:other,status:403});await call('/api'+invite.path,{method:'POST',headers:owner});await call('/api'+invite.path,{method:'POST',headers:owner,status:403});
+ const owned=(await call('/api/catalog',{headers:owner})).data;assert(owned.owned.includes(id));assert.equal(owned.stores.find(s=>s.id===id).status,'connected');
+ await catalog('inquiry',{id:productId,question:'Можно забрать сегодня?'});
+ const message=(await call('/api/catalog',{headers:owner})).data.inquiries.find(i=>i.productId===productId);assert(message);await catalog('reply',{id:message.id,answer:'Да, уточните по телефону.'},owner);assert.equal((await call('/api/catalog',{headers:other})).data.inquiries.find(i=>i.id===message.id).answer,'Да, уточните по телефону.');
+ await catalog('product',{id:productId,data:{...product,storeId:id,price:2500,quantity:2,sku:'QA',published:true,stockConfirmed:true}},owner);
+ publicProduct=(await catalog('search',{query:product.name})).products.find(p=>p.id===productId);assert.equal(publicProduct.quantity,2);assert.equal(publicProduct.stockConfirmed,true);
+ await catalog('product',{id:productId,data:{...product,storeId:id,price:2500,quantity:2,sku:'QA',published:false}},other,400);
+ await catalog('product',{id:productId,data:{...product,storeId:id,price:2500,quantity:2,sku:'QA',published:false}},owner);assert.equal((await catalog('search',{query:product.name})).products.length,0);
+ await catalog('deleteProduct',{id:productId},owner);assert(!(await call('/api/catalog',{headers:owner})).data.products.some(p=>p.id===productId));
+ await act('revokePreview',{id});await call('/api'+preview.path,{status:404});
+ console.log('PASS: draft CRUD, upload privacy, preview tokens/revocation, API/search isolation, consent/test-only gates, publication, email-bound single-use invite, owner CRUD, customer inquiry/reply.');
+}finally{await act('unpublish',{id});await act('revokePreview',{id});}
+await mkdir(new URL('../artifacts/',import.meta.url),{recursive:true});await writeFile(new URL('../artifacts/onboarding-test.json',import.meta.url),JSON.stringify({passed:true,checks,checkedAt:new Date().toISOString(),storeId:id,photo,photoBytes:png.length},null,2));

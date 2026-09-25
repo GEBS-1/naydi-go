@@ -1,0 +1,3 @@
+import {db} from '@/db';
+import {previewShop,privateHeaders} from '@/lib/onboarding';
+export async function GET(_req:Request,{params}:{params:Promise<{token:string}>}){const {token}=await params;const row=await previewShop(token);if(!row)return Response.json({error:'Ссылка недействительна, отозвана или истекла'},{status:404,headers:privateHeaders});const products=await db().prepare('SELECT data FROM products WHERE store_id=?').bind(row.id).all<{data:string}>();const shop=JSON.parse(row.data);delete shop.notes;delete shop.contact;return Response.json({shop,products:products.results.map(p=>JSON.parse(p.data)),draft:row.visibility==='draft'},{headers:privateHeaders});}

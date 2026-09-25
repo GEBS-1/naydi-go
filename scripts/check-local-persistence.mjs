@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const links=JSON.parse(await readFile(new URL('../artifacts/local-previews.json',import.meta.url),'utf8'));
+for(const link of links){const url=process.env.LOCAL_ORIGIN?new URL(new URL(link.url).pathname,process.env.LOCAL_ORIGIN):new URL(link.url);url.pathname='/api'+url.pathname;const r=await fetch(url);assert.equal(r.status,200,link.name);const b=await r.json();assert.equal(b.shop.id,link.id);assert.equal(b.products.length,5);assert.equal(b.draft,true);assert(b.products.every(p=>p.stockConfirmed===false&&p.quantity===null&&p.source&&p.checkedAt&&p.photos.length===0));console.log('PASS сохранено: '+link.name+' / 5 товаров');}
+const origin=process.env.LOCAL_ORIGIN||new URL(links[0].url).origin;const r=await fetch(origin+'/api/catalog'),publicData=await r.json();assert(!publicData.stores.some(s=>links.some(x=>x.id===s.id)));assert(!publicData.products.some(p=>links.some(x=>x.id===p.storeId)));assert(!publicData.products.some(p=>p.demo));console.log('PASS: все пять витрин закрыты, тестовых товаров в публичном каталоге нет.');

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+const code=ts.transpileModule(await readFile('lib/search-context.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+const {resolveSearch}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+const initial=resolveSearch('Аккумулятор до 8 000');assert.equal(initial.maxPrice,8000);
+const refined=resolveSearch('покажи дешевле',initial);assert.equal(refined.query,initial.query);assert.equal(refined.sort,'price');assert.equal(refined.maxPrice,8000);
+assert.equal(resolveSearch('Цветы не дороже 1 500').maxPrice,1500);
+assert.equal(resolveSearch('Подарок до 2 тыс').maxPrice,2000);
+assert.equal(resolveSearch('не дальше 5 км',initial).radiusKm,5);
+assert.equal(resolveSearch('только новые',initial).newOnly,true);
+assert.equal(resolveSearch('Корм для кошки',initial).maxPrice,undefined);
+assert.match(resolveSearch('лучше по дороге',initial).query,/по дороге/);
+console.log('PASS: budget, refinement preserves intent, radius, new condition, new request resets context. Rule tests, not live offers.');
