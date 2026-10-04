@@ -2,7 +2,7 @@ import {rankSearch,normalize} from './search';
 import type {Product,Shop} from './model';
 export type Offer={id:string;kind:'product'|'service';product:Product;shop:Shop;source:string;checkedAt:string|null;address:string|null;confirmed:boolean;distanceKm:number|null};
 export type WebSource={title:string;url:string;description:string;checkedAt:string;status:'page-only';address:null;price:null};
-export type PlanItem={id:string;category:string;name:string;query:string;note:string;enabled:boolean};
+export type PlanItem={id:string;category:string;name:string;query:string;note:string;enabled:boolean;quantity?:number;selected?:{id:string;title:string;price:number|null;source:string;checkedAt:string}};
 export type ShoppingPlan={id:string;title:string;city:string;task:string;items:PlanItem[];questions:string[];ai:boolean;updatedAt:string};
 export type DiscoveryResult={offers:Offer[];stores:Shop[];web:WebSource[];externalStatus:string;city:string;complex:boolean};
 export const safeUrl=(s:unknown)=>typeof s==='string'&&/^https?:\/\//i.test(s)?s:'';

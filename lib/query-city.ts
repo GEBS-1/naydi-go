@@ -1,0 +1,3 @@
+import {explicitCityCandidate} from './location-context';
+import {geocode} from './osm-provider';
+export async function queryCity(query:string){const candidate=explicitCityCandidate(query);if(!candidate)return null;const aliases:Record<string,string>={'самаре':'Самара','москве':'Москва','казани':'Казань','санкт-петербурге':'Санкт-Петербург','нижнем новгороде':'Нижний Новгород'};try{const rows=await geocode(aliases[candidate.value.toLowerCase()]||candidate.value,true);const exact=rows.find(r=>r.city&&r.city.toLowerCase()===(aliases[candidate.value.toLowerCase()]||candidate.value).toLowerCase());return exact?{city:exact.city!,query:query.replace(candidate.phrase,' ').trim()}:null;}catch{return null;}}

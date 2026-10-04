@@ -1,12 +1,16 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {env} from 'cloudflare:workers';
+import {ownerIdentity} from '@/lib/owner-auth';
+import {verifiedAdminIdentity} from '@/lib/admin-identity';
+import {buyerAdmin} from '@/lib/buyer-admin';
 
 export type ChatGPTUser = {
   userId: string;
   displayName: string;
   email: string;
   fullName: string | null;
+  ownerSession?: boolean;
 };
 
 const USER_ID_HEADER = "oai-authenticated-user-id";
@@ -20,10 +24,16 @@ const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+  const requestHeaders = await headers();
+  const accountAdmin=await buyerAdmin(requestHeaders.get('cookie'));
+  if(accountAdmin)return accountAdmin;
+  const owner=await ownerIdentity(requestHeaders.get('cookie'));
+  if(owner)return {...owner,ownerSession:true};
+  const identity=await verifiedAdminIdentity(requestHeaders.get('cf-access-jwt-assertion'),env);
+  if(identity)return identity;
   // Fail closed outside a verified gateway. Dev strips caller-supplied identity
   // headers before adding its loopback-only mock identity.
-  if(env.AUTH_TRUSTED_PROXY!=='1') return null;
-  const requestHeaders = await headers();
+  if(process.env.NODE_ENV!=='development'||env.AUTH_TRUSTED_PROXY!=='1') return null;
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) return null;

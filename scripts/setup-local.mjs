@@ -13,4 +13,7 @@ if(!columns.some(c=>c.name==='visibility')){execute(['--file','drizzle/0001_slow
 if(!tables.some(t=>t.name==='shopping_plans')){execute(['--file','drizzle/0002_redundant_smiling_tiger.sql']);console.log('Применена миграция 0002');}
 if(!tables.some(t=>t.name==='external_places')){execute(['--file','drizzle/0003_minor_spot.sql']);console.log('Применена миграция 0003');}
 if(!tables.some(t=>t.name==='api_budget')){execute(['--file','drizzle/0004_acoustic_stepford_cuckoos.sql']);console.log('Применена миграция 0004');}
+if(!tables.some(t=>t.name==='owner_accounts')){execute(['--file','drizzle/0005_empty_killraven.sql']);console.log('Применена миграция 0005');}
 console.log('Локальная база готова. Данные сохранены в .wrangler/state. Запустите npm run dev.');
+if(!tables.some(t=>t.name==='buyer_accounts')){execute(['--file','drizzle/0006_buyer_access.sql']);console.log('Применена миграция 0006');}
+for(const [file,table] of [['0007_bot_news.sql','bot_news_consent'],['0008_buyer_personal.sql','buyer_personal'],['0009_product_events.sql','product_events']]){if(!tables.some(t=>t.name===table)){execute(['--file','drizzle/'+file]);console.log('Применена '+file);}}

@@ -1,0 +1,11 @@
+CREATE TABLE buyer_accounts(id TEXT PRIMARY KEY, provider TEXT NOT NULL, subject TEXT NOT NULL, name TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(provider,subject));
+CREATE TABLE buyer_sessions(hash TEXT PRIMARY KEY,buyer_id TEXT NOT NULL REFERENCES buyer_accounts(id),expires_at INTEGER NOT NULL);
+CREATE TABLE buyer_logins(hash TEXT PRIMARY KEY,browser_hash TEXT NOT NULL,provider TEXT NOT NULL,expires_at INTEGER NOT NULL,code_hash TEXT,subject TEXT,name TEXT,attempts INTEGER NOT NULL DEFAULT 0,consumed INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE buyer_grants(id TEXT PRIMARY KEY,buyer_id TEXT NOT NULL,remaining INTEGER NOT NULL CHECK(remaining>=0),expires_at INTEGER,kind TEXT NOT NULL,test INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE buyer_searches(id TEXT PRIMARY KEY,buyer_id TEXT NOT NULL,grant_id TEXT NOT NULL REFERENCES buyer_grants(id),status TEXT NOT NULL,created_at INTEGER NOT NULL);
+CREATE TABLE buyer_payments(id TEXT PRIMARY KEY,buyer_id TEXT NOT NULL REFERENCES buyer_accounts(id),provider_id TEXT UNIQUE,amount INTEGER NOT NULL,searches INTEGER NOT NULL,days INTEGER NOT NULL,test INTEGER NOT NULL,status TEXT NOT NULL,confirmation_url TEXT,created_at INTEGER NOT NULL);
+CREATE INDEX buyer_grants_owner ON buyer_grants(buyer_id,expires_at);
+CREATE INDEX buyer_sessions_expiry ON buyer_sessions(expires_at);
+CREATE INDEX buyer_logins_expiry ON buyer_logins(expires_at);
+CREATE INDEX buyer_payments_owner ON buyer_payments(buyer_id,created_at);
+CREATE UNIQUE INDEX buyer_one_pending_payment ON buyer_payments(buyer_id) WHERE status IN ('creating','pending','waiting_for_capture');

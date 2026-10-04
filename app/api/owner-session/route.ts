@@ -1,0 +1,3 @@
+import {ownerIdentity,ownerCookie,requireBrowserOrigin,revokeSession} from '@/lib/owner-auth';
+export async function GET(req:Request){const user=await ownerIdentity(req.headers.get('cookie'));return Response.json({signedIn:!!user,email:user?.email||null},{headers:{'Cache-Control':'private, no-store'}});}
+export async function DELETE(req:Request){try{requireBrowserOrigin(req);await revokeSession(req.headers.get('cookie'));return Response.json({ok:true},{headers:{'Cache-Control':'no-store','Set-Cookie':ownerCookie('',req,0)}});}catch{return Response.json({error:'Недопустимый запрос'},{status:403});}}

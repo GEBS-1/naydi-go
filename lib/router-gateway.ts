@@ -1,3 +1,4 @@
+import {recordUsage,currentUsage} from './search-usage';
 import {env} from 'cloudflare:workers';
 import {reserveCall,finishCall} from './api-budget';
 import {cacheRead,cacheWrite} from './search-storage';
@@ -12,13 +13,14 @@ export async function routerCall(body:Record<string,unknown>,endpoint='chat/comp
  if(endpoint==='chat/completions'&&(typeof body.max_tokens!=='number'||body.max_tokens>3500||body.max_tokens<1))throw Error('Превышен лимит ответа модели.');
  if(JSON.stringify(body).length>1600000)throw Error('Слишком большой запрос к модели.');
  const call=await reserveCall('routerai',model),start=performance.now();
+ const complete=async(status:string,cost:number|null,data:Record<string,unknown>)=>{await finishCall(call,status,cost,{...data,costRub:cost,traceId:currentUsage()?.traceId});const usage=data.usage as RouterAnswer['usage'];recordUsage({provider:'routerai',model,ms:performance.now()-start,costRub:cost,tokens:usage?(usage.prompt_tokens??usage.input_tokens??0)+(usage.completion_tokens??usage.output_tokens??0):null,status});};
  let response:Response;
- try{response=await fetch('https://routerai.ru/api/v1/'+endpoint,{method:'POST',headers:{Authorization:`Bearer ${env.ROUTERAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({...body,model}),signal:AbortSignal.timeout(35000)});}catch{await finishCall(call,'unknown',null,{ms:performance.now()-start,error:'network'});throw Error('RouterAI не ответил. Стоимость требует сверки, автоматических повторов нет.');}
- if(!response.ok){const knownFree=[400,401,403,404,422,429].includes(response.status);await finishCall(call,'error',knownFree?0:null,{ms:performance.now()-start,httpStatus:response.status});if([401,403].includes(response.status))await cacheWrite('router-auth-failed',true,300000);throw Error(`RouterAI: HTTP ${response.status}. Обычный поиск остаётся доступен.`);}
- let answer:RouterAnswer;try{answer=await response.json() as RouterAnswer;}catch{await finishCall(call,'unknown',null,{error:'invalid-json'});throw Error('Некорректный ответ RouterAI.');}
+ try{response=await fetch('https://routerai.ru/api/v1/'+endpoint,{method:'POST',headers:{Authorization:`Bearer ${env.ROUTERAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({...body,model}),signal:AbortSignal.timeout(35000)});}catch{await complete('unknown',null,{ms:performance.now()-start,error:'network'});throw Error('RouterAI не ответил. Стоимость требует сверки, автоматических повторов нет.');}
+ if(!response.ok){const knownFree=[400,401,403,404,422,429].includes(response.status);await complete('error',knownFree?0:null,{ms:performance.now()-start,httpStatus:response.status});if([401,403].includes(response.status))await cacheWrite('router-auth-failed',true,300000);throw Error(`RouterAI: HTTP ${response.status}. Обычный поиск остаётся доступен.`);}
+ let answer:RouterAnswer;try{answer=await response.json() as RouterAnswer;}catch{await complete('unknown',null,{error:'invalid-json'});throw Error('Некорректный ответ RouterAI.');}
  let cost:number|null=null;
  const id=answer.id||response.headers.get('x-generation-id');
  // RouterAI documents total_cost in RUB on generation, unlike other compatible providers.
  if(id){try{const r=await fetch('https://routerai.ru/api/v1/generation?id='+encodeURIComponent(id),{headers:{Authorization:`Bearer ${env.ROUTERAI_API_KEY}`},signal:AbortSignal.timeout(6000)});if(r.ok){const b=await r.json() as {data?:{total_cost?:number};total_cost?:number};const n=b.data?.total_cost??b.total_cost;if(typeof n==='number'&&n>=0)cost=n;}}catch{}}
- await finishCall(call,'complete',cost,{generationId:id,ms:performance.now()-start,usage:answer.usage||null});return answer;
+ await complete('complete',cost,{generationId:id,ms:performance.now()-start,usage:answer.usage||null});return answer;
 }

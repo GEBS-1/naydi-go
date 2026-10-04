@@ -1,0 +1,3 @@
+.finder-search .finder-city-button{max-width:220px;flex-shrink:0;font-size:14px;color:#0759d5;background:#edf4ff;white-space:normal}
+@media(max-width:600px){.finder-search .finder-city-button{max-width:none;width:100%;justify-content:flex-start;order:-1}.finder-search input{flex-basis:50%}}
+@media(max-width:600px){.finder-search textarea{flex-basis:50%}}

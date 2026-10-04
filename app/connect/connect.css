@@ -1,0 +1,12 @@
+.finder-dialog{position:fixed;inset:0;margin:auto;width:min(540px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #dce4ed;border-radius:20px;padding:28px;background:#fff;color:#172538;box-shadow:0 20px 80px #15284926;font:16px/1.5 Arial,sans-serif}
+.finder-dialog::backdrop{background:#17253866}
+.finder-dialog h2{font-size:26px;font-weight:700;margin:12px 0}
+.finder-dialog p{margin:12px 0;color:#526477}
+.finder-dialog label{display:grid;gap:6px;margin:16px 0}
+.finder-dialog input:not([type=checkbox]),.finder-dialog textarea,.finder-dialog select{width:100%;box-sizing:border-box;border:1px solid #cdd8e6;border-radius:10px;padding:11px;background:#fff;color:inherit;font:inherit}
+.finder-dialog .finder-consent{display:flex;align-items:flex-start;font-size:13px;gap:10px}
+.finder-dialog .finder-consent input{margin-top:4px;flex-shrink:0}
+.finder-dialog .finder-close{float:right;padding:6px}
+.finder-dialog .finder-primary{width:100%;margin-top:12px}
+.finder-dialog .finder-trap{display:none}
+@media(max-width:440px){.finder-dialog{padding:20px}.finder-dialog h2{font-size:23px}}

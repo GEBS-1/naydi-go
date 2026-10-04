@@ -1,0 +1,5 @@
+import {readFile,writeFile} from 'node:fs/promises';
+const rows=JSON.parse(await readFile('artifacts/mvp-20260926/catalog-search.json','utf8'));
+const mean=list=>list.reduce((s,r)=>s+r.ms,0)/list.length;
+const report={scope:'Five supported-category queries, each first and repeat. Not representative of all internet searches. Hosting excluded.',measured:{requests:rows.length,knownCostRub:rows.reduce((s,r)=>s+(r.usage?.knownCostRub||0),0),costComplete:rows.every(r=>r.usage?.costComplete),firstMeanMs:mean(rows.filter(r=>r.run==='first')),repeatMeanMs:mean(rows.filter(r=>r.run==='repeat')),catalogCacheHitRate:rows.filter(r=>r.usage?.cacheHits>0).length/rows.length},projection:{sameFreeCatalogMix:[100,1000,10000].map(searches=>({searches,paidApiRub:0})),assumption:'Zero paid API cost only for this catalog-only mix. Public-server capacity is NOT guaranteed at these volumes. A Sonar miss costs extra; one observed call was 0.588568 RUB, and a query may require multiple calls.'}};
+await writeFile('artifacts/mvp-20260926/economics.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));

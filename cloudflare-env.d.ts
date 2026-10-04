@@ -1,11 +1,33 @@
 declare namespace Cloudflare {
   interface Env {
+    BUYER_AUTH_ENABLED?: string;
+    BUYER_QUOTA_ENABLED?: string;
+    AUTH_BASE_URL?: string;
+    YANDEX_CLIENT_ID?: string;
+    ADMIN_BUYER_ID?: string;
+    YANDEX_CLIENT_SECRET?: string;
+    YANDEX_AUTH_ENABLED?: string;
+    TELEGRAM_BOT_TOKEN?: string;
+    TELEGRAM_BOT_USERNAME?: string;
+    TELEGRAM_WEBHOOK_SECRET?: string;
+    OWNER_TELEGRAM_CHAT_ID?: string;
+    MAX_BOT_TOKEN?: string;
+    MAX_BOT_URL?: string;
+    MAX_WEBHOOK_SECRET?: string;
+    OWNER_MAX_USER_ID?: string;
+    MAX_AUTH_ENABLED?: string;
+    MAX_API_BASE_URL?: string;
+    YOOKASSA_ENABLED?: string;
+    YOOKASSA_TEST_MODE?: string;
+    YOOKASSA_SHOP_ID?: string;
+    YOOKASSA_SECRET_KEY?: string;
     OVERPASS_URL?: string;
     PERPLEXITY_API_KEY?: string;
     ROUTERAI_WEB_MODE?: string;
     ROUTERAI_WEB_MODEL?: string;
     API_MONTHLY_LIMIT_RUB?: string;
     API_MAX_CALL_RUB?: string;
+    API_UNCERTAIN_LIMIT_RUB?: string;
     ROUTERAI_API_KEY?: string;
     ROUTERAI_MODEL?: string;
     ADMIN_EMAIL?: string;
@@ -15,6 +37,8 @@ declare namespace Cloudflare {
     PHOTON_URL?: string;
     VALHALLA_URL?: string;
     AUTH_TRUSTED_PROXY?: string;
+    AUTH_ACCESS_ISSUER?: string;
+    AUTH_ACCESS_AUD?: string;
     DB?: D1Database;
     BUCKET?: R2Bucket;
   }

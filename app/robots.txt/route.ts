@@ -1,0 +1,1 @@
+export function GET(){return new Response('User-agent: *\nDisallow: /api/\nDisallow: /preview/\nDisallow: /invite/\nDisallow: /account\nDisallow: /launch-stats\nDisallow: /onboarding\nDisallow: /owner-login\nSitemap: https://naydigo.prepromo.ru/sitemap.xml\n',{headers:{'Content-Type':'text/plain; charset=utf-8'}});}

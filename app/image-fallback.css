@@ -1,0 +1,6 @@
+.ng-app img.ng-brand-fallback {
+  box-sizing: border-box;
+  object-fit: contain !important;
+  padding: 22%;
+  background: linear-gradient(145deg, #f3f7ff, #e8f0ff);
+}

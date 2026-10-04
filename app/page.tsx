@@ -1,2 +1,3 @@
-import CatalogApp from './catalog-app';
-export default function Page(){return <CatalogApp/>}
+import BuyerApp from './buyer-app';
+export const dynamic='force-dynamic';
+export default function Page(){return <BuyerApp/>}

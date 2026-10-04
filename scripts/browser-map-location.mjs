@@ -1,0 +1,25 @@
+import {chromium,expect} from '@playwright/test';
+import {mkdir} from 'node:fs/promises';
+
+const base=process.argv[2]||'http://localhost:3000',out='artifacts/map-location';
+await mkdir(out,{recursive:true});
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const context=await browser.newContext({viewport:{width:390,height:844},geolocation:{latitude:55.7963,longitude:49.1088},permissions:['geolocation']});
+const page=await context.newPage();page.setDefaultTimeout(120000);
+await page.addInitScript(()=>localStorage.setItem('ng_city','Казань'));
+await page.goto(base+'/#search/'+encodeURIComponent('дрель Makita'),{waitUntil:'domcontentloaded'});
+await expect(page.locator('.finder-waiting')).toHaveCount(0,{timeout:120000});
+await expect(page.locator('.search-hit').first()).toBeVisible({timeout:120000});
+await page.getByRole('main').getByRole('link',{name:'Карта'}).click();
+await expect(page.getByText('Местоположение нужно для расстояний')).toBeVisible();
+await page.getByRole('button',{name:'Разрешить определение'}).click();
+await expect(page.getByText(/City: Kazan|Город: Казань/)).toBeVisible();
+const map=page.locator('.finder-map-interactive');await expect(map).toBeVisible();
+await expect(map.locator('[aria-label="Ваше местоположение"]')).toHaveCount(1);
+const route=map.locator('a',{hasText:'Маршрут'});await expect(route).toBeVisible();
+const href=await route.getAttribute('href');if(!href?.includes('55.7963%2C49.1088')&&!href?.includes('55.7963,49.1088'))throw Error('Маршрут не содержит текущую точку: '+href);
+const box=await map.boundingBox();if(!box)throw Error('Карта не измерена');
+await page.mouse.move(box.x+box.width/2,box.y+180);await page.mouse.down();await page.mouse.move(box.x+box.width/2+60,box.y+220,{steps:5});await page.mouse.up();
+await page.screenshot({path:out+'/map-location-390.png',fullPage:true});
+console.log(JSON.stringify({city:'Казань',userMarker:true,draggable:true,routeFromUser:true,href},null,2));
+await browser.close();

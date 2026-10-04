@@ -1,0 +1,10 @@
+import {chromium,expect} from '@playwright/test';
+import {mkdir,writeFile} from 'node:fs/promises';
+const out='artifacts/route-final';await mkdir(out,{recursive:true});const report=[];
+const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage({viewport:{width:390,height:900}});page.setDefaultTimeout(30000);
+try{await page.goto('http://localhost:3000/');await page.getByRole('button',{name:'Изменить город'}).click();await page.getByLabel('Город',{exact:true}).fill('Казань');await page.getByRole('button',{name:'Выбрать',exact:true}).click();await page.getByRole('textbox',{name:'Что хотите найти?'}).fill('цветы');await page.getByRole('button',{name:'По дороге',exact:true}).click();
+ for(const [label,text] of [['Откуда вы едете?','Кремлёвская 1'],['Куда вы едете?','Дербышки']]){const input=page.getByLabel(label,{exact:true});await input.fill(text);const block=page.locator('.journey-address').filter({has:input});await block.locator('li button').first().click({timeout:45000});}
+ const response=page.waitForResponse(r=>r.url().endsWith('/api/journey')&&r.request().method()==='POST',{timeout:90000});await page.getByRole('button',{name:'Найти товары по дороге',exact:true}).click();const r=await response,b=await r.json();expect(r.ok()).toBeTruthy();expect(b.route.points.length).toBeGreaterThan(2);await expect(page.locator('.journey')).toContainText('Основной маршрут');
+ let via=null;if(b.results.length){const button=page.locator('.journey-results button').first();await button.click();via=await page.getByRole('link',{name:'Заехать',exact:true}).first().getAttribute('href');expect(new URL(via).searchParams.get('rtext').split('~')).toHaveLength(3);}
+ await page.screenshot({path:out+'/route-390.png',fullPage:true});report.push({passed:true,routePoints:b.route.points.length,results:b.results.length,via,warnings:b.warnings});
+}catch(e){report.push({error:e.message});process.exitCode=1;await page.screenshot({path:out+'/failure.png',fullPage:true});}finally{await browser.close();await writeFile(out+'/report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}

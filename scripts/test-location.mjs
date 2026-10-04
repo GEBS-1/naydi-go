@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {cleanCity,cityKey,detectedCity,preferredCity} from '../lib/location.ts';
+assert.equal(cleanCity('  г. Нижний   Новгород  '),'Нижний Новгород');
+assert.equal(cityKey('Орёл'),cityKey('орел'));
+assert.equal(preferredCity('Москва','Казань'),'Москва');
+assert.equal(preferredCity('', 'Екатеринбург'),'Екатеринбург');
+assert.equal(detectedCity({city:'Москва',country:'RU'}),'Москва');
+assert.equal(detectedCity({city:'Paris',country:'FR'}),'');
+assert.equal(detectedCity(), '');
+console.log('PASS: 7 checks — city normalization, manual priority, trusted RU metadata, missing metadata.');

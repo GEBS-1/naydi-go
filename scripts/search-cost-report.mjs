@@ -1,0 +1,12 @@
+import {readdirSync,writeFileSync} from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import path from 'node:path';
+const folder='.wrangler/state/v3/d1/miniflare-D1DatabaseObject';
+const db=new DatabaseSync(path.join(folder,readdirSync(folder).find(f=>f.endsWith('.sqlite')&&f!=='metadata.sqlite')),{readOnly:true});
+const since=JSON.parse(await import('node:fs').then(fs=>fs.readFileSync('artifacts/search-verification/report.json','utf8'))).report[0].body.usage.traceId;
+const first=db.prepare("SELECT created_at FROM api_calls WHERE json_extract(data,'$.traceId')=? ORDER BY created_at LIMIT 1").get(since)?.created_at;
+const calls=db.prepare('SELECT provider,model,actual,status,data,created_at FROM api_calls WHERE created_at>=? ORDER BY created_at').all(first||Date.now()).map(row=>{const data=JSON.parse(row.data),usage=data.usage;return {provider:row.provider,model:row.model,status:row.status,billedKopecks:row.actual,at:new Date(row.created_at).toISOString(),traceId:data.traceId,ms:data.ms,tokens:usage?(usage.prompt_tokens??usage.input_tokens??0)+(usage.completion_tokens??usage.output_tokens??0):0,costRub:data.costRub};});
+const totals=db.prepare('SELECT provider,model,count(*) calls,sum(actual)/100.0 billedRub FROM api_calls WHERE created_at>=? GROUP BY provider,model').all(first||Date.now());
+const result={since:new Date(first||Date.now()).toISOString(),totals,calls};
+writeFileSync('artifacts/search-verification/costs.json',JSON.stringify(result,null,2));
+console.log(JSON.stringify(totals));db.close();

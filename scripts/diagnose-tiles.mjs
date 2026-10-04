@@ -1,0 +1,14 @@
+import {chromium} from '@playwright/test';
+import {mkdir,writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage({viewport:{width:390,height:950}}),events=[];
+page.on('response',async r=>{if(r.url().includes('tile.openstreetmap.org'))events.push({url:r.url(),status:r.status(),headers:await r.allHeaders(),request:await r.request().allHeaders()});});
+page.on('requestfailed',r=>{if(r.url().includes('tile.openstreetmap.org'))events.push({url:r.url(),failure:r.failure()});});
+await page.goto('http://localhost:3000/#map/'+encodeURIComponent('беспроводные наушники'));
+await page.locator('.finder-map').waitFor({timeout:90000});
+await page.waitForTimeout(4000);
+await mkdir('artifacts/map-diagnostics',{recursive:true});
+await page.screenshot({path:'artifacts/map-diagnostics/before.png'});
+await writeFile('artifacts/map-diagnostics/network-'+(events.some(e=>e.failure)?'failed':'ok')+'.json',JSON.stringify(events,null,2));
+console.log(JSON.stringify(events.map(e=>({url:e.url,status:e.status,failure:e.failure,referer:e.request?.referer,type:e.headers?.['content-type']})),null,2));
+await browser.close();
