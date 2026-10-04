@@ -3,7 +3,10 @@ import type {Product} from './model';
 import {normalize} from './search';
 
 const text=z.string().trim().max(4000),short=z.string().trim().min(1).max(200);
-export const productInputSchema=z.object({storeId:short,name:short,category:short,brand:text,model:text,description:text,features:text,price:z.number().min(0).max(1e9),quantity:z.number().int().min(0).max(1e7),sku:text,published:z.boolean(),photos:z.array(z.string().max(1000)).max(5),keywords:text,stockConfirmed:z.boolean().default(true)}).strict();
+// ProductForm edits the persisted Product shape, so legacy metadata such as
+// id/demo can arrive with writable fields. Strip it and construct metadata on
+// the server; spreadsheet rows use this same command path.
+export const productInputSchema=z.object({storeId:short,name:short,category:short,brand:text,model:text,description:text,features:text,price:z.number().min(0).max(1e9),quantity:z.number().int().min(0).max(1e7),sku:text,published:z.boolean(),photos:z.array(z.string().max(1000)).max(5),keywords:text,stockConfirmed:z.boolean().default(true)}).strip();
 export type ProductInput=z.infer<typeof productInputSchema>;
 export type ProductSourceType='manual'|'csv'|'xlsx'|'catalog'|'external';
 export interface ProductCommandMeta {sourceType:ProductSourceType;sourceUrl?:string;checkedAt?:string}

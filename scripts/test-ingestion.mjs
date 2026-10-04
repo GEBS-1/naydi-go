@@ -38,6 +38,9 @@ assert.equal(prepared.product.price,12990);
 assert.equal(prepared.product.quantity,2);
 assert.equal(prepared.product.normalizedName,'дрель makita ddf485');
 assert.equal(prepared.product.sourceType,'xlsx');
+const formPrepared=commands.prepareProduct({...input,id:'client-must-not-control-id',demo:true},undefined,{sourceType:'manual'});
+assert.notEqual(formPrepared.product.id,'client-must-not-control-id');
+assert.equal(formPrepared.product.demo,false);
 assert.throws(()=>commands.prepareProduct({...input,published:true},undefined,{sourceType:'csv'}),/фотографию|источника/);
 
 const allowed={name:'Дрель',category:'Дом и ремонт',brand:'',model:'',features:'',description:'Инструмент',keywords:'дрель'};
