@@ -12,7 +12,7 @@ export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:strin
   <CardImage src={h.image} alt={h.title}/>
   <div>
    <small>{h.kind==='product'?'Товар':h.kind==='service'?'Услуга / мастерская':h.kind==='page'?'Страница в интернете':'Подходящая организация'}</small>
-   <a onClick={()=>trackProductEvent('seller',h.city,h.category)} href={href} target={href.startsWith('http')?'_blank':undefined} rel="noreferrer"><h2>{h.title}</h2></a>
+   <a onClick={()=>{if(href.startsWith('http'))trackProductEvent('seller_click',h.city,h.category)}} href={href} target={href.startsWith('http')?'_blank':undefined} rel="noreferrer"><h2>{h.title}</h2></a>
    {h.price!==null?<strong>{money(h.price)}</strong>:<strong>Уточнить цену</strong>}
    {h.seller&&<p>Продавец / сайт: {h.seller}</p>}
    {h.priceEvidence&&<small>Цена опубликована в источнике · не подтверждает наличие в филиале</small>}
@@ -24,11 +24,11 @@ export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:strin
    <p className="search-unconfirmed">{h.status==='seller-confirmed'?'Данные о наличии предоставлены продавцом':h.status==='organization'?'Доступность уточняйте у продавца':'Опубликовано на сайте · наличие в конкретной точке уточняется'}</p>
    <div className="search-hit-actions">
     <FavoriteButton item={{id:h.product?'product:'+h.product.id:h.shop?'store:'+h.shop.id:h.id,title:h.title,kind:h.kind,url:href,city:h.city,price:h.price,checkedAt:h.checkedAt}}/>
-    {h.site&&<a onClick={()=>trackProductEvent('seller',h.city,h.category)} href={h.site} target="_blank" rel="noreferrer">Открыть сайт ↗</a>}
-    {h.phone&&<a href={'tel:'+h.phone.split(';')[0].replace(/[^+\d]/g,'')}><Phone size={15}/>Позвонить</a>}
-    {routeHit(h)&&<><a onClick={()=>trackProductEvent('route',h.city,h.category)} href={routeHit(h)!} target="_blank" rel="noreferrer">Маршрут ↗</a>{onMap&&<button onClick={()=>onMap(h.id)}>На карте</button>}</>}
+    {h.site&&<a onClick={()=>trackProductEvent('seller_click',h.city,h.category)} href={h.site} target="_blank" rel="noreferrer">Открыть сайт ↗</a>}
+    {h.phone&&<a onClick={()=>trackProductEvent('phone_click',h.city,h.category)} href={'tel:'+h.phone.split(';')[0].replace(/[^+\d]/g,'')}><Phone size={15}/>Позвонить</a>}
+    {routeHit(h)&&<><a onClick={()=>trackProductEvent('route_click',h.city,h.category)} href={routeHit(h)!} target="_blank" rel="noreferrer">Маршрут ↗</a>{onMap&&<button onClick={()=>onMap(h.id)}>На карте</button>}</>}
    </div>
-   <small><a href={h.source} target={h.source.startsWith('http')?'_blank':undefined} rel="noreferrer">{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</a>{h.checkedAt?' · Получено '+new Date(h.checkedAt).toLocaleDateString('ru-RU'):''}</small>
+   <small><a onClick={()=>{if(h.source.startsWith('http'))trackProductEvent('seller_click',h.city,h.category)}} href={h.source} target={h.source.startsWith('http')?'_blank':undefined} rel="noreferrer">{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</a>{h.checkedAt?' · Получено '+new Date(h.checkedAt).toLocaleDateString('ru-RU'):''}</small>
   </div>
  </article>;
 }

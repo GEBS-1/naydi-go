@@ -17,6 +17,7 @@
     "test:onboarding": "node scripts/test-onboarding.mjs",
     "test:search": "node scripts/test-search.mjs",
     "test:ingestion": "node scripts/test-ingestion.mjs",
+    "test:analytics": "node scripts/test-launch-analytics.mjs",
     "check:persistence": "node scripts/check-local-persistence.mjs",
     "typecheck": "tsc --noEmit"
   },
