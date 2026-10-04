@@ -13,7 +13,7 @@ export function localDiscovery(products:Product[],shops:Shop[],query:string,city
  const stores=shops.filter(s=>s.visibility==='public'&&!s.demo&&normalize(s.city)===normalize(city));
  const publicProducts=products.filter(p=>p.published&&!p.demo&&!(p as Product&{testOnly?:boolean}).testOnly&&stores.some(s=>s.id===p.storeId));
  const matches=rankSearch(publicProducts,query);
- const offers:Offer[]=matches.map(p=>{const s=stores.find(s=>s.id===p.storeId)!;return {id:p.id,kind:p.kind||'product',product:p,shop:s,source:safeUrl(p.source)||`/#product/${encodeURIComponent(p.id)}`,checkedAt:p.checkedAt||null,address:s.street?`${s.city}, ${s.street}`:null,confirmed:p.kind!=='service'&&s.status==='connected'&&p.stockConfirmed===true&&p.quantity!==null,distanceKm:near&&onMap(s)?km(near,s):null};});
+ const offers:Offer[]=matches.map(p=>{const s=stores.find(s=>s.id===p.storeId)!;return {id:p.id,kind:p.kind||'product',product:p,shop:s,source:safeUrl(p.sourceUrl)||safeUrl(p.source)||`/#product/${encodeURIComponent(p.id)}`,checkedAt:p.checkedAt||null,address:s.street?`${s.city}, ${s.street}`:null,confirmed:p.kind!=='service'&&s.status==='connected'&&p.stockConfirmed===true&&p.quantity!==null,distanceKm:near&&onMap(s)?km(near,s):null};});
  if(near)offers.sort((a,b)=>(a.distanceKm??Infinity)-(b.distanceKm??Infinity));
  const q=normalize(query);return {offers,stores:stores.filter(s=>offers.some(o=>o.shop.id===s.id)||!q||normalize([s.name,s.category,s.description].join(' ')).includes(q))};
 }

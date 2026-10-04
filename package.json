@@ -16,6 +16,7 @@
     "import:kazan": "node scripts/import-kazan.mjs",
     "test:onboarding": "node scripts/test-onboarding.mjs",
     "test:search": "node scripts/test-search.mjs",
+    "test:ingestion": "node scripts/test-ingestion.mjs",
     "check:persistence": "node scripts/check-local-persistence.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -44,6 +45,7 @@
     "sonner": "^2.0.8",
     "tailwind-merge": "3.6.0",
     "vaul": "^1.1.2",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -73,7 +73,8 @@ db=sqlite3.connect(d/'naydi.sqlite');copy=sqlite3.connect(b/'naydi.sqlite');db.b
 shutil.copytree(d/'bucket',b/'bucket')
 protected=['shops','products','onboarding','preview_tokens','owner_invites','uploads']
 def fingerprint(con):
- return {t:hashlib.sha256(json.dumps(con.execute('SELECT * FROM '+t+' ORDER BY 1').fetchall(),ensure_ascii=False).encode()).hexdigest() for t in protected}
+ stable={'shops':'id,owner,data,visibility','products':'id,store_id,published,data'}
+ return {t:hashlib.sha256(json.dumps(con.execute('SELECT '+stable.get(t,'*')+' FROM '+t+' ORDER BY 1').fetchall(),ensure_ascii=False).encode()).hexdigest() for t in protected}
 before=fingerprint(db)
 test=sqlite3.connect(b/'restore-check.sqlite');saved=sqlite3.connect(b/'naydi.sqlite');saved.backup(test)
 assert test.execute('PRAGMA integrity_check').fetchone()[0]=='ok' and fingerprint(test)==before
@@ -85,6 +86,10 @@ for file,needed in expected:
  present=needed&tables
  if present and present!=needed:raise RuntimeError('Partial schema: '+file)
  if not present:sql.append((pathlib.Path(release)/'drizzle'/file).read_text())
+product_columns={r[1] for r in db.execute('PRAGMA table_info(products)')}
+ingestion_columns={'normalized_name','source_type','source_url','checked_at'}
+if product_columns&ingestion_columns and not ingestion_columns<=product_columns:raise RuntimeError('Partial schema: 0010_product_ingestion.sql')
+if not product_columns&ingestion_columns:sql.append((pathlib.Path(release)/'drizzle'/'0010_product_ingestion.sql').read_text())
 db.executescript('BEGIN IMMEDIATE;\n'+'\n'.join(sql)+'\nCOMMIT;')
 assert fingerprint(db)==before and db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
 photos=lambda root:{str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}

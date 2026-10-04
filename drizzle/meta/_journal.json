@@ -43,6 +43,41 @@
       "when": 1790333520721,
       "tag": "0005_empty_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790400000000,
+      "tag": "0006_buyer_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790410000000,
+      "tag": "0007_bot_news",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790420000000,
+      "tag": "0008_buyer_personal",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790430000000,
+      "tag": "0009_product_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790440000000,
+      "tag": "0010_product_ingestion",
+      "breakpoints": true
     }
   ]
 }
