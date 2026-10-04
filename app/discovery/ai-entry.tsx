@@ -8,8 +8,8 @@ import './planner.css';
 
 export default function AIEntry({id,card,initialTask='',city:initialCity=''}:{id:string;initialTask?:string;city?:string;card:(p:Product,s:Shop)=>ReactNode}){
   const [city,setCity]=useState(initialCity);
-  useEffect(()=>{try{const pending=sessionStorage.getItem('ng_plan_task');if(pending){setTask(pending);sessionStorage.removeItem('ng_plan_task');}setCity(localStorage.getItem('ng_city')||sessionStorage.getItem('ng_current_city')||initialCity);}catch{}},[initialCity]);
   const [ai,setAI]=useState(false),[task,setTask]=useState(initialTask),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{try{const pending=sessionStorage.getItem('ng_plan_task');if(pending){setTask(pending);sessionStorage.removeItem('ng_plan_task');}setCity(localStorage.getItem('ng_city')||sessionStorage.getItem('ng_current_city')||initialCity);}catch{}},[initialCity]);
   useEffect(()=>{void fetch('/api/discovery').then(async r=>await r.json() as {ai?:boolean}).then(b=>setAI(b.ai===true)).catch(()=>setError('Не удалось проверить подключение ИИ.'));},[]);
   if(id)return <Planner key={id} id={id} ai={ai} card={card}/>;
   if(!city)return <section className="finder-plan"><h1>Выберите город</h1><p>Для подборки нужен выбранный город.</p><a href="#home">Указать город в поисковой строке</a></section>;

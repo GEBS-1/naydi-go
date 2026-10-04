@@ -7,7 +7,7 @@ export default function AdBreak({onDone,onCancel}:{onDone:()=>void;onCancel:()=>
   const [left,setLeft]=useState(SECONDS);
   const done=useRef(onDone);
   const finished=useRef(false);
-  done.current=onDone;
+  useEffect(()=>{done.current=onDone;},[onDone]);
   useEffect(()=>{
     const started=performance.now();
     const id=window.setInterval(()=>{
