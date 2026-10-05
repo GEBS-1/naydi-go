@@ -2,6 +2,10 @@ declare namespace Cloudflare {
   interface Env {
     BUYER_AUTH_ENABLED?: string;
     BUYER_QUOTA_ENABLED?: string;
+    EMAIL_AUTH_ENABLED?: string;
+    EMAIL_FROM?: string;
+    EMAIL_REPLY_TO?: string;
+    RESEND_API_KEY?: string;
     AUTH_BASE_URL?: string;
     YANDEX_CLIENT_ID?: string;
     ADMIN_BUYER_ID?: string;

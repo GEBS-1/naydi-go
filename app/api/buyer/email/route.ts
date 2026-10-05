@@ -1,0 +1,3 @@
+import {z} from 'zod';
+import {startEmailLogin} from '@/lib/buyer-email';
+export async function POST(req:Request){try{const raw=await req.text();if(raw.length>1000)throw Error('Слишком большой запрос');const body=z.object({email:z.string().email().max(254)}).parse(JSON.parse(raw));const result=await startEmailLogin(req,body.email);return Response.json({ok:true,message:'Если адрес указан верно, письмо для входа отправлено.'},{headers:{'Cache-Control':'no-store',...(result.cookie?{'Set-Cookie':result.cookie}:{})}});}catch(e){return Response.json({error:e instanceof z.ZodError?'Проверьте адрес почты':(e as Error).message},{status:400,headers:{'Cache-Control':'no-store'}});}}
