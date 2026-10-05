@@ -27,13 +27,15 @@ for p in releases.iterdir():
 active=[p for p in items if str(p) in start]
 assert len(active)==1
 inactive=sorted((p for p in items if p!=active[0]),key=lambda p:p.name,reverse=True)
-remove=[p for p in inactive if p.parent==releases]
+# Keep exactly one last known release for an immediate code rollback.
+rollback=inactive[:1]
+remove=[p for p in inactive[1:] if p.parent==releases]
 removed=[]
 for p in remove:
     size=sum(f.stat().st_size for f in p.rglob('*') if f.is_file())
     shutil.rmtree(p)
     removed.append({'name':p.name,'bytes':size})
-print(json.dumps({'active':active[0].name,'rollback_kept':None,'removed':removed,'free_bytes':shutil.disk_usage(app).free}))
+print(json.dumps({'active':active[0].name,'rollback_kept':rollback[0].name if rollback else None,'removed':removed,'free_bytes':shutil.disk_usage(app).free}))
 PY""")
 finally:
     client.close()

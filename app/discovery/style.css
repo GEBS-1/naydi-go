@@ -175,9 +175,48 @@
  .finder-page-map .finder-search-extras,.finder-page-map .finder-mode-hint,.finder-page-map .finder-context-note{display:none}
  .finder-page-map .finder-results-toolbar{justify-content:flex-end;margin:10px 0;padding-bottom:10px;border:0}
  .finder-page-map .finder-results-toolbar>button,.finder-page-map .finder-results-toolbar>.finder-tabs:first-of-type{display:none}
- .finder-page-map .finder-location-note{margin:10px 0!important;padding:12px}
- .finder-page-map .finder-location-note p{font-size:12px;line-height:1.4}
+.finder-page-map .finder-location-note{margin:10px 0!important;padding:12px}
+.finder-page-map .finder-location-note p{font-size:12px;line-height:1.4}
 }
+
+/* City is selected globally in the header, outside the query field. */
+.finder-header-city{display:inline-flex;align-items:center;justify-content:center;gap:7px;max-width:210px;min-height:46px;padding:10px 14px!important;border:1px solid #dce7f5!important;border-radius:14px!important;background:#f4f8fd!important;color:#173451!important;font:inherit;font-weight:650;white-space:nowrap;cursor:pointer}
+.finder-header-city>span{overflow:hidden;text-overflow:ellipsis}
+.finder-header-city>svg:first-child{color:#0b63f6}
+.finder-city-form{position:fixed;z-index:65;left:50%;top:98px;width:min(620px,calc(100vw - 32px));margin:0!important;padding:18px;border:1px solid #dce6f2;border-radius:20px;background:#fff;box-shadow:0 0 0 100vmax #10243d42,0 24px 60px #10243d30;transform:translateX(-50%);align-items:end}
+.finder-city-form label{flex:1;min-width:200px}
+.finder-city-form input{width:100%}
+
+/* Photo and nearby are primary search modes, not small utility links. */
+.finder-search-extras{display:flex;align-items:stretch;justify-content:center;gap:18px;margin:17px 3px 0}
+.finder-search-extras .finder-photo{margin:0}
+.finder-search-extras .finder-photo>label,.finder-nearby-action{width:min(292px,42vw);min-height:74px;padding:11px 20px!important;border:1px solid #d9e5f4!important;border-radius:20px!important;background:#fff!important;color:#173451!important;box-shadow:0 8px 24px #173f7010;font-weight:650;text-align:left;display:flex;align-items:center;justify-content:flex-start;gap:14px}
+.finder-search-extras .finder-photo>label:hover,.finder-nearby-action:hover{border-color:#a9c9f7!important;box-shadow:0 11px 28px #173f701a}
+.finder-search-extras b,.finder-search-extras small{display:block}
+.finder-search-extras b{font-size:15px}
+.finder-search-extras small{margin-top:2px;color:#78879a;font-size:12px;font-weight:500}
+.finder-extra-icon{width:46px;height:46px;display:grid!important;place-items:center;flex:0 0 46px;border-radius:50%;background:#0b63f6;color:#fff}
+.finder-extra-icon.nearby{background:#10b981}
+
+@media(min-width:801px) and (max-width:1320px){
+ .finder-home-hero{margin:-36px -32px 0;padding-left:32px;padding-right:32px}
+}
+
+@media(max-width:700px){
+ .finder-header-city{min-width:105px;max-width:145px;min-height:40px;padding:8px 10px!important;font-size:13px!important}
+ .finder-search>svg{display:block;order:0}
+ .finder-search textarea{order:0;flex:1 1 160px;width:auto;min-height:44px;padding:8px 3px;border-top:0}
+ .finder-search>.finder-mic{order:0;margin-left:0}
+ .finder-search-extras{gap:9px;margin-top:12px}
+ .finder-search-extras .finder-photo,.finder-nearby-action{flex:1;min-width:0}
+ .finder-search-extras .finder-photo>label,.finder-nearby-action{width:100%;min-height:66px;padding:9px 11px!important;border-radius:16px!important;gap:9px}
+ .finder-extra-icon{width:38px;height:38px;flex-basis:38px}
+ .finder-search-extras b{font-size:13px;line-height:1.2}
+ .finder-search-extras small{font-size:10px;line-height:1.25}
+ .finder-city-form{top:76px;align-items:stretch;flex-direction:column}
+ .finder-city-form label{min-width:0;width:100%}
+}
+@media(max-width:390px){.finder-header-city{max-width:128px}.finder-header-city>svg:last-child{display:none}}
 
 /* Honest fallback when the public tile server is unavailable. */
 .finder-map{background-color:#e9eff4;background-image:linear-gradient(#dfe8f2 1px,transparent 1px),linear-gradient(90deg,#dfe8f2 1px,transparent 1px);background-size:48px 48px}
