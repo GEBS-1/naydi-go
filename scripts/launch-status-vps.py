@@ -13,6 +13,7 @@ for line in pathlib.Path('/var/www/naydi-data/runtime.env').read_text().splitlin
   k,val=line.split('=',1)
   try:cfg[k]=json.loads(val)
   except:cfg[k]=val
-print('admin_identity_configured',bool(cfg.get('AUTH_ACCESS_ISSUER') and cfg.get('AUTH_ACCESS_AUD')))
+print('access_admin_configured',bool(cfg.get('AUTH_ACCESS_ISSUER') and cfg.get('AUTH_ACCESS_AUD')))
+print('buyer_admin_configured',bool(cfg.get('ADMIN_BUYER_ID') and cfg.get('ADMIN_EMAIL')))
 PY""")
 finally:c.close()
