@@ -1,7 +1,7 @@
 import {fetchSource} from './source-fetch';
 import {extractOffers,pageHit} from './offer-extraction';
 import {relevantOffers} from './offer-relevance';
-import {cacheRead,cacheWrite,acquireProvider,releaseProvider} from './search-storage';
+import {cacheRead,cacheReadEntry,cacheWrite,acquireProvider,releaseProvider} from './search-storage';
 import {cacheHit} from './search-usage';
 import {recordFreeCall} from './api-budget';
 import type {SearchHit} from './city-search';
@@ -32,11 +32,21 @@ const catalogs:Catalog[]=[
  {matches:/зоотовар|когтерез|пуходерк|ошейник|шлейк|поводок|груминг|товар.*животн/iu,url:'https://rybalka-rt.ru/catalog/zootovary/',location:{address:'ул. Восстания, 8, Казань',point:{lat:55.8360194,lng:49.0986157},phone:'+7 987 225-15-15',source:'https://rybalka-rt.ru/'}},
  {matches:/автозвук|автомагнитол|сабвуфер|автосигнализац|видеорегистратор|динамик.*авто/iu,url:'https://signalka16.ru/',location:{address:'ул. Фатыха Амирхана, 48, Казань',point:{lat:55.8434885,lng:49.1374226},phone:'+7 843 266-50-54',source:'https://signalka16.ru/'}},
 ];
+function matchingCatalogs(query:string){return catalogs.filter(c=>c.matches.test(query)).slice(0,2);}
+function cacheKey(city:string,url:string){return 'seller-catalog:v8:'+city.trim().toLowerCase()+':'+url;}
+/** Read the last observed seller offers without waiting for network refresh. */
+export async function cachedCatalogOffers(query:string,city:string):Promise<{hits:SearchHit[];fresh:boolean}>{
+ if(!/^казань$/iu.test(city.trim()))return {hits:[],fresh:true};
+ const entries=await Promise.all(matchingCatalogs(query).map(({url})=>cacheReadEntry<SearchHit[]>(cacheKey(city,url))));
+ const present=entries.filter((entry):entry is NonNullable<typeof entry>=>entry!==null);
+ if(present.length)cacheHit();
+ return {hits:relevantOffers(present.flatMap(entry=>entry.data),query,city),fresh:present.length>0&&present.every(entry=>entry.fresh)};
+}
 export async function catalogOffers(query:string,city:string):Promise<SearchHit[]>{
  if(!/^казань$/iu.test(city.trim()))return []; // Never label a regional offer as a different city.
- const sources=catalogs.filter(c=>c.matches.test(query)).slice(0,2);
+ const sources=matchingCatalogs(query);
  const batches=await Promise.all(sources.map(async({url,location})=>{
-  const key='seller-catalog:v8:'+city.trim().toLowerCase()+':'+url,cached=await cacheRead<SearchHit[]>(key);
+  const key=cacheKey(city,url),cached=await cacheRead<SearchHit[]>(key);
   if(cached){cacheHit();return cached;}
   const lock='seller:'+new URL(url).hostname;if(!await acquireProvider(lock,20000))return [];
   const start=performance.now();let success=false;

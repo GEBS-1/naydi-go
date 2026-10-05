@@ -8,10 +8,11 @@ import {money} from '@/lib/model';
 
 export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:string)=>void}){
  const href=h.product?'#product/'+h.product.id:h.shop?'#store/'+h.shop.id:h.site||h.source;
+ const origin=h.kind==='product'?(h.status==='seller-confirmed'?'Товар магазина':'Найдено на сайте продавца'):h.kind==='service'?'Услуга / мастерская':h.kind==='page'?'Страница в интернете':'Подходящий магазин — цену уточнить';
  return <article className="search-hit">
   <CardImage src={h.image} alt={h.title}/>
   <div>
-   <small>{h.kind==='product'?'Товар':h.kind==='service'?'Услуга / мастерская':h.kind==='page'?'Страница в интернете':'Подходящая организация'}</small>
+   <small className={'search-origin '+h.status}>{origin}</small>
    <a onClick={()=>{if(href.startsWith('http'))trackProductEvent('seller_click',h.city,h.category)}} href={href} target={href.startsWith('http')?'_blank':undefined} rel="noreferrer"><h2>{h.title}</h2></a>
    {h.price!==null?<strong>{money(h.price)}</strong>:<strong>Уточнить цену</strong>}
    {h.seller&&<p>Продавец / сайт: {h.seller}</p>}

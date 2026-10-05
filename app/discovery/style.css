@@ -221,3 +221,10 @@
 /* Honest fallback when the public tile server is unavailable. */
 .finder-map{background-color:#e9eff4;background-image:linear-gradient(#dfe8f2 1px,transparent 1px),linear-gradient(90deg,#dfe8f2 1px,transparent 1px);background-size:48px 48px}
 .finder-map-warning{position:absolute;z-index:4;left:50%;top:50%;max-width:300px;margin:0;transform:translate(-50%,-50%);border:1px solid #f0d7a8;border-radius:12px;background:#fff8e9;padding:12px;text-align:center;font-size:12px;box-shadow:0 8px 24px #58400d1a}
+.finder-waiting{margin:15px 0;padding:18px;border:1px solid #dce6f2;border-radius:15px;background:#f5f9ff;color:#53677f}
+.finder-waiting.compact{display:inline-flex;align-items:center;gap:9px;margin:10px 0;padding:8px 12px;border-radius:999px;font-size:13px}
+.finder-waiting.compact p{margin:0}
+.finder-waiting.compact:before{content:'';width:8px;height:8px;border-radius:50%;background:#0b63f6;box-shadow:0 0 0 5px #0b63f615;animation:finder-pulse 1.2s ease-in-out infinite}
+@keyframes finder-pulse{50%{opacity:.35}}
+.search-origin{display:inline-flex!important;width:max-content;padding:4px 8px;border-radius:999px;background:#eef4fb;color:#4d6178!important;font-weight:700}
+.search-origin.seller-confirmed{background:#ddf8e8;color:#147743!important}.search-origin.website{background:#eaf2ff;color:#145fc2!important}.search-origin.organization{background:#fff3d6;color:#825c09!important}
