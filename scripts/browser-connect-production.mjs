@@ -15,7 +15,7 @@ try{
   await page.goto(origin+'/connect',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(3000);
   await writeFile(out+'/diagnostics.json',JSON.stringify(report,null,2));
-  await page.getByRole('button',{name:'Оставить заявку'}).click();
+  await page.getByRole('button',{name:'Разместить товары'}).click();
   const select=page.getByLabel('Где вам ответить?');
   await expect(select).toBeVisible();
   const options=await select.locator('option').allTextContents();
