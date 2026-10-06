@@ -1,7 +1,7 @@
 import {chromium,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 
-const origin='https://naydigo.prepromo.ru';
+const origin=process.argv[2]||'https://naydigo.prepromo.ru';
 const out='artifacts/connect-production';
 await mkdir(out,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});
@@ -18,7 +18,9 @@ try{
   await expect(page.getByRole('link',{name:'Создать магазин бесплатно'})).toBeVisible();
   await expect(page.getByRole('link',{name:'Посмотреть демо-магазин'})).toBeVisible();
   await page.getByRole('button',{name:'Оставить заявку'}).first().click();
-  const select=page.getByLabel('Где вам ответить?');
+  const dialog=page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  const select=dialog.getByLabel('Где вам ответить?');
   await expect(select).toBeVisible();
   const options=await select.locator('option').allTextContents();
   expect(options).toEqual(['Telegram','MAX','Телефон','Email']);
