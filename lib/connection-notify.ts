@@ -4,6 +4,8 @@ import {maxApiBase} from './buyer-config';
 export type ConnectionRequestNotice={
   id:string;
   name:string;
+  contactPerson?:string;
+  phone?:string;
   contact:string;
   city:string;
   note:string;
@@ -21,7 +23,9 @@ function message(item:ConnectionRequestNotice){
     'Новая заявка в НайдиGo',
     '',
     `Компания: ${item.name}`,
+    `Контактное лицо: ${item.contactPerson||'Не указано'}`,
     `Город: ${item.city}`,
+    `Телефон: ${item.phone||'Не указан'}`,
     `Контакт: ${item.contact}`,
     `Канал ответа: ${{telegram:'Telegram',max:'MAX',phone:'Телефон',email:'Email'}[item.preferredChannel||'phone']}`,
     `Категория: ${item.category||'Не указана'}`,

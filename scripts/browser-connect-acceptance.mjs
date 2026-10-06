@@ -12,12 +12,15 @@ const guest=await browser.newPage({viewport:{width:390,height:844}}),admin=await
 try {
  await guest.goto('http://localhost:3000/connect');
  await guest.waitForTimeout(1500); // let the client route hydrate before the first interaction
- await guest.getByRole('button',{name:'Оставить заявку',exact:true}).click();
- await guest.getByLabel('Название магазина или компании').fill(name);
- await guest.getByLabel('Телефон, email или имя пользователя').fill('qa@example.invalid');
- await guest.getByLabel('Что продаёте или какие услуги оказываете?').fill('Локальная проверка заявки, не реальный магазин');
- await guest.getByLabel('Согласен на использование контактов для обработки этой заявки').check();
- await guest.getByRole('button',{name:'Отправить заявку',exact:true}).click();
+ await guest.getByRole('button',{name:'Оставить заявку',exact:true}).first().click();
+ const application=guest.locator('dialog[open]');
+ await application.getByLabel('Ваше имя').fill('QA Контакт');
+ await application.getByLabel('Название магазина или компании').fill(name);
+ await application.getByLabel('Телефон',{exact:true}).fill('+7 900 000-00-00');
+ await application.getByLabel('Телефон, email или имя пользователя').fill('qa@example.invalid');
+ await application.getByLabel('Что продаёте или какие услуги оказываете?').fill('Локальная проверка заявки, не реальный магазин');
+ await application.getByLabel('Согласен на использование контактов для обработки этой заявки').check();
+ await application.getByRole('button',{name:'Отправить заявку',exact:true}).click();
  await expect(guest.getByRole('heading',{name:'Заявка получена'})).toBeVisible();
  await guest.screenshot({path:out+'/connection-390.png'});
  const row=db.prepare('SELECT id,status FROM connection_requests WHERE json_extract(data,\'$.name\')=?').get(name);

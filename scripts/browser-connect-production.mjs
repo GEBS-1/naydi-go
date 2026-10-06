@@ -15,7 +15,9 @@ try{
   await page.goto(origin+'/connect',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(3000);
   await writeFile(out+'/diagnostics.json',JSON.stringify(report,null,2));
-  await page.getByRole('button',{name:'Разместить товары'}).click();
+  await expect(page.getByRole('link',{name:'Создать магазин бесплатно'})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Посмотреть демо-магазин'})).toBeVisible();
+  await page.getByRole('button',{name:'Оставить заявку'}).first().click();
   const select=page.getByLabel('Где вам ответить?');
   await expect(select).toBeVisible();
   const options=await select.locator('option').allTextContents();
