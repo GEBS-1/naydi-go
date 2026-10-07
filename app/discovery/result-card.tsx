@@ -4,6 +4,7 @@ import {trackProductEvent} from '@/lib/product-events';
 import {MapPin,Phone} from 'lucide-react';
 import {routeHit,type SearchHit} from '@/lib/city-search';
 import {FavoriteButton} from '../personal';
+import {BuyerGateLink} from '../buyer-gate';
 import {money} from '@/lib/model';
 
 export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:string)=>void}){
@@ -13,7 +14,7 @@ export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:strin
   <CardImage src={h.image} alt={h.title}/>
   <div>
    <small className={'search-origin '+h.status}>{origin}</small>
-   <a onClick={()=>{if(href.startsWith('http'))trackProductEvent('seller_click',h.city,h.category)}} href={href} target={href.startsWith('http')?'_blank':undefined} rel="noreferrer"><h2>{h.title}</h2></a>
+   {href.startsWith('http')?<BuyerGateLink href={href} onAllowed={()=>trackProductEvent('seller_click',h.city,h.category)}><h2>{h.title}</h2></BuyerGateLink>:<a href={href}><h2>{h.title}</h2></a>}
    {h.price!==null?<strong>{money(h.price)}</strong>:<strong>Уточнить цену</strong>}
    {h.seller&&<p>Продавец / сайт: {h.seller}</p>}
    {h.priceEvidence&&<small>Цена опубликована в источнике · не подтверждает наличие в филиале</small>}
@@ -25,11 +26,11 @@ export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:strin
    <p className="search-unconfirmed">{h.status==='seller-confirmed'?'Данные о наличии предоставлены продавцом':h.status==='organization'?'Доступность уточняйте у продавца':'Опубликовано на сайте · наличие в конкретной точке уточняется'}</p>
    <div className="search-hit-actions">
     <FavoriteButton item={{id:h.product?'product:'+h.product.id:h.shop?'store:'+h.shop.id:h.id,title:h.title,kind:h.kind,url:href,city:h.city,price:h.price,checkedAt:h.checkedAt}}/>
-    {h.site&&<a onClick={()=>trackProductEvent('seller_click',h.city,h.category)} href={h.site} target="_blank" rel="noreferrer">Открыть сайт ↗</a>}
-    {h.phone&&<a onClick={()=>trackProductEvent('phone_click',h.city,h.category)} href={'tel:'+h.phone.split(';')[0].replace(/[^+\d]/g,'')}><Phone size={15}/>Позвонить</a>}
+    {h.site&&<BuyerGateLink onAllowed={()=>trackProductEvent('seller_click',h.city,h.category)} href={h.site}>Открыть сайт ↗</BuyerGateLink>}
+    {h.phone&&<BuyerGateLink onAllowed={()=>trackProductEvent('phone_click',h.city,h.category)} href={'tel:'+h.phone.split(';')[0].replace(/[^+\d]/g,'')}><Phone size={15}/>Позвонить</BuyerGateLink>}
     {routeHit(h)&&<><a onClick={()=>trackProductEvent('route_click',h.city,h.category)} href={routeHit(h)!} target="_blank" rel="noreferrer">Маршрут ↗</a>{onMap&&<button onClick={()=>onMap(h.id)}>На карте</button>}</>}
    </div>
-   <small><a onClick={()=>{if(h.source.startsWith('http'))trackProductEvent('seller_click',h.city,h.category)}} href={h.source} target={h.source.startsWith('http')?'_blank':undefined} rel="noreferrer">{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</a>{h.checkedAt?' · Получено '+new Date(h.checkedAt).toLocaleDateString('ru-RU'):''}</small>
+   <small>{h.source.startsWith('http')?<BuyerGateLink onAllowed={()=>trackProductEvent('seller_click',h.city,h.category)} href={h.source}>{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</BuyerGateLink>:<a href={h.source}>{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</a>}{h.checkedAt?' · Получено '+new Date(h.checkedAt).toLocaleDateString('ru-RU'):''}</small>
   </div>
  </article>;
 }
