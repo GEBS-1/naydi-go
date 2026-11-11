@@ -148,10 +148,15 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
   <section className="home-search-intro" aria-labelledby="home-search-title">
    <p className="nearby-eyebrow">НАЙДИGO · ПОИСК РЯДОМ</p>
    <h1 id="home-search-title">Что ищете рядом?</h1>
-   <p className="nearby-lead">Товары и услуги в ближайших магазинах и местах.</p>
+   <p className="nearby-lead">Опишите, что нужно купить. Покажем предложения, продавцов и точки рядом с вами.</p>
    <div className="home-guide-search">{searchBox}</div>
    <div className="home-guide-location">{locationControl}</div>
   </section>
+  <div className="home-search-steps" aria-label="Как работает НайдиGo">
+   <div><span>1</span><strong>Расскажите, что ищете</strong><small>Товар, задача или голосовой запрос</small></div>
+   <div><span>2</span><strong>Сравните варианты</strong><small>Карточки, продавцы и точки на карте</small></div>
+   <div><span>3</span><strong>Идите за покупкой</strong><small>Откройте продавца или постройте маршрут</small></div>
+  </div>
   <QueryExamples onChoose={text=>{
    setQuery(text);
    const input=document.querySelector<HTMLTextAreaElement>('.finder-search textarea');
