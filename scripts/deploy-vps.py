@@ -22,7 +22,7 @@ archive=local/'source.tar.gz'
 skip={'.git','node_modules','.wrangler','dist','out','.next','.vinext','artifacts','.sites-runtime','.agents','.codex','outputs','work','__pycache__'}
 if not resume:
  with tarfile.open(archive,'w:gz') as tar:
-  tracked=subprocess.check_output(['git','-c','safe.directory='+str(ROOT),'ls-files','-z'],cwd=ROOT).split(b'\0')
+  tracked=subprocess.check_output(['git','-c','safe.directory='+ROOT.as_posix(),'ls-files','-z'],cwd=ROOT).split(b'\0')
   for name in tracked:
    if not name:continue
    relative=Path(os.fsdecode(name));p=ROOT/relative
