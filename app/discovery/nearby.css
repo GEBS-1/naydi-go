@@ -121,7 +121,7 @@
 
 /* Product photos, coordinated list selection and the selected seller's offers. */
 .nearby-focus .finder-results-grid .search-hit.nearby-card.nearby-product>div.nearby-card-image{flex:0 0 132px;width:132px;min-width:132px;max-width:132px;height:152px;background:#fff}
-.nearby-focus .finder-results-grid .nearby-card[data-selected=true]{background:#edf5ff;box-shadow:inset 3px 0 #0866ff;border-radius:10px;padding:14px 10px;scroll-margin:90px}
+.nearby-focus .finder-results-grid .nearby-card[data-selected=true]{background:#f8fbff;box-shadow:none;scroll-margin:90px}
 .finder .nearby-card button.nearby-title{display:block;text-align:left;color:inherit;font:inherit;background:transparent;border:0;border-radius:0;padding:0}
 .nearby-price-unknown{font-size:12px;color:#788797}.nearby-specs,.nearby-model{overflow-wrap:anywhere}.nearby-rating{color:#8a6517!important}
 .nearby-focus .finder-map-card{bottom:12px;max-height:145px;overflow:auto}
@@ -149,8 +149,8 @@
 }
 
 .nearby-focus .finder-results-grid .search-hit.nearby-card[data-selected=true] {
- border-color: #83b5fc;
- background: #edf5ff;
+ border-color: #dfe8f1;
+ background: #f8fbff;
 }
 
 .nearby-focus .nearby-card-details .nearby-description {
