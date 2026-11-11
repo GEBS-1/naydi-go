@@ -2,11 +2,11 @@
 import Script from "next/script";
 import {useEffect,useState} from 'react';
 
-const COUNTER_ID = 113120246;
+const COUNTER_ID = 114124874;
 
 export default function YandexMetrika() {
   const [enabled,setEnabled]=useState(false);
-  useEffect(()=>{setEnabled(location.hostname==='naydigo.prepromo.ru'&&!navigator.webdriver&&!new URLSearchParams(location.search).has('qa'));},[]);
+  useEffect(()=>{const update=()=>{let accepted=false;try{accepted=localStorage.getItem('ng_analytics_consent_v1')==='yes';}catch{}setEnabled(accepted&&location.hostname==='naydigo.prepromo.ru'&&!navigator.webdriver&&!new URLSearchParams(location.search).has('qa'));};update();addEventListener('ng-analytics-choice',update);return()=>removeEventListener('ng-analytics-choice',update);},[]);
   if(!enabled)return null;
   return (
     <>
@@ -19,9 +19,6 @@ export default function YandexMetrika() {
         })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=${COUNTER_ID}', 'ym');
         ym(${COUNTER_ID}, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
       `}</Script>
-      <noscript>
-        <div><img src={`https://mc.yandex.ru/watch/${COUNTER_ID}`} style={{position:"absolute",left:"-9999px"}} alt="" /></div>
-      </noscript>
     </>
   );
 }

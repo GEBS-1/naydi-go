@@ -7,3 +7,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Production release retention
+
+The owner requires keeping only the current working NaydiGo release on the VPS.
+Deploy through `scripts/deploy-vps.py`: after the new version passes startup and
+HTTPS checks, its retention hook removes inactive older releases using
+`scripts/prune-naydi-releases.py`. Keep the existing version until the replacement
+has passed those checks. Do not leave extra rollback releases after success.
+Never include PostgreSQL, uploads, environment settings, or data backups in code
+cleanup. Do not remove artifacts used by another process, static-file serving,
+or scheduled maintenance. Other VPS applications are outside this cleanup scope.

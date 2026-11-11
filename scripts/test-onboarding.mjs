@@ -3,7 +3,9 @@ import {writeFile,mkdir} from 'node:fs/promises';
 const base=process.env.TEST_URL||'http://127.0.0.1:3001';
 if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw new Error('Тест работает только локально');
 const auth=(id,email)=>({'oai-authenticated-user-id':id,'oai-authenticated-user-email':email});
-const admin=auth('qa-admin','qa-admin@example.com'),owner=auth('qa-recipient','owner@example.com'),other=auth('qa-other','other@example.com');
+const admin=process.env.TEST_ADMIN_COOKIE?{cookie:process.env.TEST_ADMIN_COOKIE}:auth('qa-admin','qa-admin@example.com');
+let owner=process.env.TEST_OWNER_COOKIE?{cookie:process.env.TEST_OWNER_COOKIE}:auth('qa-recipient','owner@example.com');
+const other=process.env.TEST_OTHER_COOKIE?{cookie:process.env.TEST_OTHER_COOKIE}:auth('qa-other','other@example.com');
 let checks=0;
 async function call(path,{method='GET',headers={},body,status=200}={}){const r=await fetch(base+path,{method,headers:{...(method!=='GET'?{Origin:new URL(base).origin}:{}),...headers,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});const text=await r.text();assert.equal(r.status,status,`${method} ${path}: ${text}`);checks++;return {data:text?JSON.parse(text):null,headers:r.headers};}
 const act=(action,extra={},headers=admin,status=200)=>call('/api/onboarding',{method:'POST',headers,body:{action,...extra},status}).then(r=>r.data);
@@ -26,10 +28,12 @@ try{
  await act('publish',{id,consent:'Согласие только для локального QA теста'},admin,400);
  await act('product',{id,data:{...product,id:productId,testOnly:false,price:2190}});
  await act('publish',{id,consent:''},admin,400);await act('invite',{id,email:'owner@example.com'},admin,400);
+ await act('publish',{id,consent:'Согласие для автоматического локального теста; после проверки снять публикацию.'},admin,400);
+ await act('product',{id,data:{...product,id:productId,testOnly:false,price:2190,priceConfirmed:true,quantity:2,stockConfirmed:true}});
  await act('publish',{id,consent:'Согласие для автоматического локального теста; после проверки снять публикацию.'});
- let publicProduct=(await catalog('search',{query:product.name})).products.find(p=>p.id===productId);assert(publicProduct);assert.equal(publicProduct.price,2190);assert.equal(publicProduct.stockConfirmed,false);assert.equal(publicProduct.quantity,null);
+ let publicProduct=(await catalog('search',{query:product.name})).products.find(p=>p.id===productId);assert(publicProduct);assert.equal(publicProduct.price,2190);assert.equal(publicProduct.priceConfirmed,true);assert.equal(publicProduct.stockConfirmed,true);assert.equal(publicProduct.quantity,2);
  const invite=await act('invite',{id,email:'owner@example.com'});
- await call('/api'+invite.path,{method:'POST',status:401});await call('/api'+invite.path,{method:'POST',headers:other,status:403});await call('/api'+invite.path,{method:'POST',headers:owner});await call('/api'+invite.path,{method:'POST',headers:owner,status:403});
+ await call('/api'+invite.path,{method:'POST',headers:other,status:403});const accepted=await call('/api'+invite.path,{method:'POST'});const ownerCookie=accepted.headers.get('set-cookie')?.split(';')[0];assert.match(ownerCookie||'',/^ng_owner=[a-f0-9]{64}$/);owner={cookie:ownerCookie};await call('/api'+invite.path,{method:'POST',headers:owner,status:403});
  const owned=(await call('/api/catalog',{headers:owner})).data;assert(owned.owned.includes(id));assert.equal(owned.stores.find(s=>s.id===id).status,'connected');
  await catalog('inquiry',{id:productId,question:'Можно забрать сегодня?'});
  const message=(await call('/api/catalog',{headers:owner})).data.inquiries.find(i=>i.productId===productId);assert(message);await catalog('reply',{id:message.id,answer:'Да, уточните по телефону.'},owner);assert.equal((await call('/api/catalog',{headers:other})).data.inquiries.find(i=>i.id===message.id).answer,'Да, уточните по телефону.');

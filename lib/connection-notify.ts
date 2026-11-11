@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {maxApiBase} from './buyer-config';
 
 export type ConnectionRequestNotice={

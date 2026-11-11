@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {ownerIdentity} from '@/lib/owner-auth';
 import {verifiedAdminIdentity} from '@/lib/admin-identity';
 import {buyerAdmin} from '@/lib/buyer-admin';
@@ -11,6 +11,7 @@ export type ChatGPTUser = {
   email: string;
   fullName: string | null;
   ownerSession?: boolean;
+  adminSession?: boolean;
 };
 
 const USER_ID_HEADER = "oai-authenticated-user-id";

@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {detectedCity} from '@/lib/location';
 import {geocode} from '@/lib/osm-provider';
 import {z} from 'zod';

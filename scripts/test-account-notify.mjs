@@ -1,0 +1,15 @@
+import {build} from 'esbuild';
+import assert from 'node:assert/strict';
+globalThis.nEnv={AUTH_BASE_URL:'https://notice.test',TELEGRAM_BOT_TOKEN:'fixture',MAX_BOT_TOKEN:'fixture'};
+let identities=[{provider:'max',subject:'456'},{provider:'telegram',subject:'123'}];
+globalThis.nDB={prepare:()=>({bind:()=>({all:async()=>({results:identities}),first:async()=>({provider:'telegram',subject:'123'})})})};
+const result=await build({stdin:{contents:"export {notifyAccount} from './lib/account-notify';",resolveDir:process.cwd()},bundle:true,write:false,platform:'node',format:'esm',plugins:[{name:'fixtures',setup(b){b.onResolve({filter:/^@\/(db|lib\/server-env)$/},a=>({path:a.path,namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},a=>({contents:a.path==='@/db'?'export const db=()=>globalThis.nDB;':'export const env=globalThis.nEnv;'}));}}]});
+const {notifyAccount}=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
+let calls=[];
+globalThis.fetch=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return Response.json({ok:true});};
+assert.equal(await notifyAccount('account','Новое сообщение','/messages'),true);
+assert.equal(calls.length,1);assert.equal(calls[0].body.chat_id,'123');assert.equal(calls[0].body.reply_markup.inline_keyboard[0][0].url,'https://notice.test/messages');
+calls=[];globalThis.fetch=async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return calls.length===1?Response.json({ok:false},{status:403}):Response.json({success:true});};
+assert.equal(await notifyAccount('account','Публикация','/sell'),true);assert.equal(calls.length,2);assert.match(calls[1].url,/user_id=456/);
+identities=[{provider:'telegram',subject:'not-a-chat'}];calls=[];assert.equal(await notifyAccount('account','Проверка','/sell'),false);assert.equal(calls.length,0);
+console.log('PASS Account notice: primary messenger, linked fallback, correct recipient and link, invalid subject rejected; no real messages sent');

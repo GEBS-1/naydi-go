@@ -1,0 +1,2 @@
+import {chromium} from '@playwright/test';
+const browser=await chromium.launch({channel:'chrome',headless:true});try{const p=await browser.newPage();await p.setContent('<img id="photo" referrerpolicy="no-referrer" src="https://kazan.mehamalina.ru/statics/product/8295/6ad5cb0b7fd91.jpg">');await p.waitForFunction(()=>document.querySelector('#photo').naturalWidth>0,{timeout:20000});console.log('REAL_PRODUCT_IMAGE',await p.locator('img').evaluate(x=>({width:x.naturalWidth,height:x.naturalHeight,loaded:x.complete})));}finally{await browser.close();}

@@ -78,6 +78,13 @@
       "when": 1790440000000,
       "tag": "0010_product_ingestion",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1793354974000,
+      "tag": "0011_discovered_offers",
+      "breakpoints": true
     }
   ]
 }

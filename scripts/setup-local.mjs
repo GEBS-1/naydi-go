@@ -1,23 +1,46 @@
-import {spawnSync} from 'node:child_process';
-import {existsSync} from 'node:fs';
-import {projectRoot} from './sites-env.mjs';
-import path from 'node:path';
-process.env.XDG_CONFIG_HOME ||= path.join(projectRoot,'.sites-runtime','xdg-config');
-if(!existsSync(path.join(projectRoot,'dist/server/wrangler.json')))throw new Error('Сначала выполните npm run build');
-const prefix=['--import','./scripts/sites-env.mjs','./node_modules/wrangler/bin/wrangler.js','d1','execute','DB','--local','--config','dist/server/wrangler.json','--persist-to','.wrangler/state','--json'];
-function execute(args){const r=spawnSync(process.execPath,[...prefix,...args],{cwd:projectRoot,encoding:'utf8'});if(r.status!==0)throw new Error(r.stderr||r.stdout);return JSON.parse(r.stdout)}
-const tables=execute(['--command',"SELECT name FROM sqlite_master WHERE type='table'"])[0].results;
-if(!tables.some(t=>t.name==='shops')){execute(['--file','drizzle/0000_dusty_prima.sql']);console.log('Применена миграция 0000');}
-const columns=execute(['--command','PRAGMA table_info(shops)'])[0].results;
-if(!columns.some(c=>c.name==='visibility')){execute(['--file','drizzle/0001_slow_ender_wiggin.sql']);console.log('Применена миграция 0001');}
-if(!tables.some(t=>t.name==='shopping_plans')){execute(['--file','drizzle/0002_redundant_smiling_tiger.sql']);console.log('Применена миграция 0002');}
-if(!tables.some(t=>t.name==='external_places')){execute(['--file','drizzle/0003_minor_spot.sql']);console.log('Применена миграция 0003');}
-if(!tables.some(t=>t.name==='api_budget')){execute(['--file','drizzle/0004_acoustic_stepford_cuckoos.sql']);console.log('Применена миграция 0004');}
-if(!tables.some(t=>t.name==='owner_accounts')){execute(['--file','drizzle/0005_empty_killraven.sql']);console.log('Применена миграция 0005');}
-if(!tables.some(t=>t.name==='buyer_accounts')){execute(['--file','drizzle/0006_buyer_access.sql']);console.log('Применена миграция 0006');}
-for(const [file,table] of [['0007_bot_news.sql','bot_news_consent'],['0008_buyer_personal.sql','buyer_personal'],['0009_product_events.sql','product_events']]){if(!tables.some(t=>t.name===table)){execute(['--file','drizzle/'+file]);console.log('Применена '+file);}}
-const productColumns=execute(['--command','PRAGMA table_info(products)'])[0].results;
-const ingestionColumns=['normalized_name','source_type','source_url','checked_at'],present=ingestionColumns.filter(name=>productColumns.some(c=>c.name===name));
-if(present.length&&present.length!==ingestionColumns.length)throw new Error('Обнаружена частично применённая миграция 0010; автоматическое продолжение остановлено.');
-if(!present.length){execute(['--file','drizzle/0010_product_ingestion.sql']);console.log('Применена миграция 0010');}
-console.log('Локальная база готова. Данные сохранены в .wrangler/state. Запустите npm run dev.');
+// One-time legacy import, then PostgreSQL migrations only. No seed/reset.
+import {existsSync,readdirSync,mkdirSync,readFileSync,writeFileSync,copyFileSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+import {DatabaseSync,backup} from 'node:sqlite';
+import {createHash} from 'node:crypto';
+import {Pool,types} from 'pg';
+import {localPostgres} from './local-postgres.mjs';
+import {postgresSettings,postgresMigrate} from './postgres-migrate.mjs';
+import {copyToPostgres} from './migrate-postgres.mjs';
+await localPostgres();
+const settings=postgresSettings(),pool=new Pool({connectionString:settings.DATABASE_URL,max:1}),client=await pool.connect();
+types.setTypeParser(20,Number);
+const output=resolve('artifacts/postgres');mkdirSync(output,{recursive:true});
+try{
+ const existing=(await client.query("SELECT tablename FROM pg_tables WHERE schemaname='public'")).rows;
+ if(!existing.length){
+  const folder='.wrangler/state/v3/d1/miniflare-D1DatabaseObject';
+  const sources=existsSync(folder)?readdirSync(folder).filter(f=>f.endsWith('.sqlite')&&f!=='metadata.sqlite'):[];
+  if(sources.length>1)throw Error('Multiple legacy DB files: select the correct snapshot explicitly');
+  if(sources.length){
+   const legacy=new DatabaseSync(join(folder,sources[0]),{readOnly:true});
+   const snapshot=join(output,'legacy-before-postgres-'+Date.now()+'.sqlite');
+   try{await backup(legacy,snapshot);}finally{legacy.close();}
+   const source=new DatabaseSync(snapshot,{readOnly:true});
+   try{const report=await copyToPostgres(source,client);await postgresMigrate(client,{baselineOnly:true});await postgresMigrate(client);writeFileSync(join(output,'migration-live-report.json'),JSON.stringify({sourceSnapshot:snapshot,destination:'PostgreSQL 127.0.0.1:5433/naydigo',...report},null,2));}
+   finally{source.close();}
+  }else await postgresMigrate(client);
+ }else await postgresMigrate(client);
+ const r2='.wrangler/state/v3/r2/miniflare-R2BucketObject',photos=resolve(settings.NAYDI_BUCKET||'.sites-runtime/photos');mkdirSync(photos,{recursive:true});let count=0;
+ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+ const photoMarker=resolve('.sites-runtime/postgres/legacy-photos-imported.json');
+ if(!existsSync(photoMarker)&&existsSync(r2))for(const file of readdirSync(r2).filter(f=>f.endsWith('.sqlite')&&f!=='metadata.sqlite')){
+  const metadata=new DatabaseSync(join(r2,file),{readOnly:true});
+  try{for(const item of metadata.prepare('SELECT key,blob_id,size,http_metadata FROM _mf_objects').all()){
+   if(!/^[a-zA-Z0-9_-]{1,160}$/.test(item.key)||!item.blob_id||!/^[a-zA-Z0-9]+$/.test(item.blob_id))throw Error('Unsupported legacy photo');
+   const src=join('.wrangler/state/v3/r2/site-creator-r2/blobs',item.blob_id),target=join(photos,item.key),bytes=readFileSync(src);
+   if(bytes.length!==item.size)throw Error('Photo size mismatch');
+   if(existsSync(target)&&hash(readFileSync(target))!==hash(bytes))throw Error('Refusing to replace changed photo');
+   if(!existsSync(target))copyFileSync(src,target);
+   if(!existsSync(target+'.meta'))writeFileSync(target+'.meta',item.http_metadata);
+   if(hash(readFileSync(target))!==hash(bytes))throw Error('Photo verification failed');count++;
+  }}finally{metadata.close();}
+ }
+ if(!existsSync(photoMarker))writeFileSync(photoMarker,JSON.stringify({verifiedPhotos:count,at:new Date().toISOString()}));
+ console.log('PostgreSQL ready. Original SQLite retained as a migration backup. Verified photos:',count);
+}finally{client.release();await pool.end();}

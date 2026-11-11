@@ -8,7 +8,7 @@ const runtimeRoot = process.env.SITES_RUNTIME_ROOT || path.join(projectRoot, ".s
 
 // Wrangler reads .dev.vars by default, while this project keeps local secrets
 // in ignored .env files. Load them only into the local child process.
-const localVars = {};
+export const localVars = {};
 for (const name of [".env", ".env.local"]) {
   const file = path.join(projectRoot, name);
   if (existsSync(file)) Object.assign(localVars, parseEnv(readFileSync(file, "utf8")));

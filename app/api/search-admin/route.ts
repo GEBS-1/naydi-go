@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {z} from 'zod';
 import {actor,sameOrigin} from '@/lib/onboarding';
 import {db} from '@/db';

@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';import {build} from 'esbuild';
+const b=await build({entryPoints:['lib/search-image.ts'],bundle:true,write:false,platform:'node',format:'esm'});const m=await import('data:text/javascript;base64,'+Buffer.from(b.outputFiles[0].text).toString('base64'));
+assert.equal(m.rasterType(Buffer.from('<svg onload="alert(1)">')),null);assert.equal(m.rasterType(Buffer.from([255,216,255,0])),'image/jpeg');assert.equal(await m.searchImage('https://127.0.0.1/private'),null);assert.equal(await m.searchImage('https://localhost/private'),null);console.log('PASS image loader blocks local addresses and active SVG content');

@@ -1,0 +1,26 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+
+export type VoicePhase='idle'|'requesting'|'recording'|'transcribing';
+const RATE=16000,MAX_SECONDS=120;
+type Capture={stream:MediaStream;context:AudioContext;source:MediaStreamAudioSourceNode;processor:ScriptProcessorNode;chunks:Int16Array[];samples:number;started:number;timer:number|null;stopping:boolean};
+function downsample(input:Float32Array,from:number){const ratio=from/RATE,n=Math.floor(input.length/ratio),out=new Int16Array(n);for(let i=0;i<n;i++){const a=Math.floor(i*ratio),b=Math.min(Math.floor((i+1)*ratio),input.length);let sum=0;for(let j=a;j<b;j++)sum+=input[j];const x=Math.max(-1,Math.min(1,sum/Math.max(1,b-a)));out[i]=x<0?x*32768:x*32767;}return out;}
+function wav(chunks:Int16Array[],n:number){const b=new Uint8Array(44+n*2),v=new DataView(b.buffer),s=(o:number,t:string)=>{for(let i=0;i<t.length;i++)b[o+i]=t.charCodeAt(i);};s(0,'RIFF');v.setUint32(4,36+n*2,true);s(8,'WAVE');s(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,RATE,true);v.setUint32(28,RATE*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);s(36,'data');v.setUint32(40,n*2,true);let o=44;for(const c of chunks)for(let i=0;i<c.length;i++,o+=2)v.setInt16(o,c[i],true);return b;}
+function base64(bytes:Uint8Array){const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';let out='';for(let i=0;i<bytes.length;i+=3){const a=bytes[i],b=bytes[i+1],c=bytes[i+2];out+=alphabet[a>>2]+alphabet[((a&3)<<4)|(b===undefined?0:b>>4)]+(b===undefined?'=':alphabet[((b&15)<<2)|(c===undefined?0:c>>6)])+(c===undefined?'=':alphabet[c&63]);}return out;}
+
+/** Records until the user stops it (or two minutes); silence never ends dictation. */
+export function useVoiceDictation(onTranscript:(text:string,send:boolean)=>void,maxLength=500){
+ const capture=useRef<Capture|null>(null),callback=useRef(onTranscript);callback.current=onTranscript;
+ const [phase,setPhase]=useState<VoicePhase>('idle'),[message,setMessage]=useState(''),[seconds,setSeconds]=useState(0);
+ useEffect(()=>()=>{void cleanup();},[]);
+ async function cleanup(){const c=capture.current;capture.current=null;if(!c)return;if(c.timer!==null)clearInterval(c.timer);c.processor.onaudioprocess=null;try{c.processor.disconnect();c.source.disconnect();}catch{}c.stream.getTracks().forEach(t=>t.stop());try{await c.context.close();}catch{}}
+ async function start(){
+  if(phase!=='idle')return;setMessage('');
+  if(!navigator.mediaDevices?.getUserMedia||!window.AudioContext){setMessage('Запись с микрофона в этом браузере недоступна. Введите текст вручную.');return;}
+  setPhase('requesting');let stream:MediaStream|undefined,context:AudioContext|undefined;
+  try{setSeconds(0);stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true}});context=new AudioContext();await context.resume();const source=context.createMediaStreamSource(stream),processor=context.createScriptProcessor(4096,1,1),c:Capture={stream,context,source,processor,chunks:[],samples:0,started:Date.now(),timer:null,stopping:false};processor.onaudioprocess=e=>{if(capture.current!==c)return;const raw=downsample(e.inputBuffer.getChannelData(0),context!.sampleRate),remaining=RATE*MAX_SECONDS-c.samples,chunk=raw.subarray(0,Math.max(0,remaining));if(chunk.length){c.chunks.push(chunk);c.samples+=chunk.length;}if(c.samples>=RATE*MAX_SECONDS){void finish(false);setMessage('Достигнут лимит записи. Распознаю текст для проверки.');}};source.connect(processor);processor.connect(context.destination);capture.current=c;setPhase('recording');setMessage('Слушаю. Паузы не завершают запись.');c.timer=window.setInterval(()=>{const elapsed=Math.min(MAX_SECONDS,Math.floor((Date.now()-c.started)/1000));setSeconds(elapsed);if(elapsed>=MAX_SECONDS)void finish(false);},250);}
+  catch(e){stream?.getTracks().forEach(t=>t.stop());try{await context?.close();}catch{}setPhase('idle');setMessage(e instanceof DOMException&&e.name==='NotAllowedError'?'Нет доступа к микрофону. Разрешите его в браузере или введите текст вручную.':'Не удалось включить микрофон. Проверьте разрешения браузера.');}
+ }
+ async function finish(send=false){const c=capture.current;if(!c||c.stopping)return;c.stopping=true;setPhase('transcribing');setMessage('Расшифровываю запись…');const samples=c.samples,b=wav(c.chunks,samples);await cleanup();if(samples<RATE/4){setPhase('idle');setMessage('Слишком короткая запись или тишина. Попробуйте ещё раз.');return;}try{const r=await fetch('/api/speech/transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio:base64(b)})}),data=await r.json() as {text?:string;error?:string};if(!r.ok)throw Error(data.error||'Не удалось распознать речь.');const spoken=(data.text||'').replace(/\s+/g,' ').trim();if(!spoken){setPhase('idle');setMessage('Речь не распознана. Повторите или введите текст.');return;}callback.current(spoken.slice(0,maxLength),send);setPhase('idle');setMessage(send?'Распознано. Отправляю.':'Текст распознан. Проверьте его перед отправкой.');}catch(e){setPhase('idle');setMessage(e instanceof Error?e.message:'Распознавание временно недоступно.');}}
+ return {phase,message,seconds,start,finish};
+}

@@ -1,37 +1,70 @@
 'use client';
 import {useState} from 'react';
+import {MapPin,Navigation,Phone,ExternalLink,MessageCircle} from 'lucide-react';
+import {routeHit,safeHTTP,type PublicSearchHit} from '@/lib/city-search';
 import {trackProductEvent} from '@/lib/product-events';
-import {MapPin,Phone} from 'lucide-react';
-import {routeHit,type SearchHit} from '@/lib/city-search';
-import {FavoriteButton} from '../personal';
-import {BuyerGateLink} from '../buyer-gate';
 import {money} from '@/lib/model';
+import type {SearchDetails} from '@/lib/search-details';
 
-export default function ResultCard({hit:h,onMap}:{hit:SearchHit;onMap?:(id:string)=>void}){
- const href=h.product?'#product/'+h.product.id:h.shop?'#store/'+h.shop.id:h.site||h.source;
- const origin=h.kind==='product'?(h.status==='seller-confirmed'?'Товар магазина':'Найдено на сайте продавца'):h.kind==='service'?'Услуга / мастерская':h.kind==='page'?'Страница в интернете':'Подходящий магазин — цену уточнить';
- return <article className="search-hit">
-  <CardImage src={h.image} alt={h.title}/>
-  <div>
-   <small className={'search-origin '+h.status}>{origin}</small>
-   {href.startsWith('http')?<BuyerGateLink href={href} onAllowed={()=>trackProductEvent('seller_click',h.city,h.category)}><h2>{h.title}</h2></BuyerGateLink>:<a href={href}><h2>{h.title}</h2></a>}
-   {h.price!==null?<strong>{money(h.price)}</strong>:<strong>Уточнить цену</strong>}
-   {h.seller&&<p>Продавец / сайт: {h.seller}</p>}
-   {h.priceEvidence&&<small>Цена опубликована в источнике · не подтверждает наличие в филиале</small>}
-   <p>{h.description}</p>
-   {h.address&&<p><MapPin size={14}/>{h.city?h.city+', ':''}{h.address}{h.distanceKm!==null?` · ${h.distanceKm.toFixed(1)} км по прямой`:''}</p>}
-   {h.locationSource&&<p><a href={h.locationSource} target="_blank" rel="noreferrer">Адрес продавца по данным карты</a> · наличие товара в этой точке не подтверждено</p>}
-   {h.hours&&<p>Часы работы: {h.hours}</p>}
-   {h.sourceAvailability==='out_of_stock'&&<p className="search-unconfirmed">На сайте продавца: нет в наличии</p>}
-   <p className="search-unconfirmed">{h.status==='seller-confirmed'?'Данные о наличии предоставлены продавцом':h.status==='organization'?'Доступность уточняйте у продавца':'Опубликовано на сайте · наличие в конкретной точке уточняется'}</p>
-   <div className="search-hit-actions">
-    <FavoriteButton item={{id:h.product?'product:'+h.product.id:h.shop?'store:'+h.shop.id:h.id,title:h.title,kind:h.kind,url:href,city:h.city,price:h.price,checkedAt:h.checkedAt}}/>
-    {h.site&&<BuyerGateLink onAllowed={()=>trackProductEvent('seller_click',h.city,h.category)} href={h.site}>Открыть сайт ↗</BuyerGateLink>}
-    {h.phone&&<BuyerGateLink onAllowed={()=>trackProductEvent('phone_click',h.city,h.category)} href={'tel:'+h.phone.split(';')[0].replace(/[^+\d]/g,'')}><Phone size={15}/>Позвонить</BuyerGateLink>}
-    {routeHit(h)&&<><a onClick={()=>trackProductEvent('route_click',h.city,h.category)} href={routeHit(h)!} target="_blank" rel="noreferrer">Маршрут ↗</a>{onMap&&<button onClick={()=>onMap(h.id)}>На карте</button>}</>}
+export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:PublicSearchHit;near?:{lat:number;lng:number};selected?:boolean;onSelect?:()=>void}){
+ const [details,setDetails]=useState<SearchDetails|null>(null),[expanded,setExpanded]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState('');
+ const route=routeHit(h,near);
+ const sourceUrl=safeHTTP(h.source);
+ const sourceHost=sourceUrl?new URL(sourceUrl).hostname.replace(/^(?:www|m)\./,''):'';
+ const sourceLabel=h.kind==='product'&&h.status!=='seller-confirmed'&&sourceHost
+  ? sourceHost==='t.me'||sourceHost==='telegram.me'?'Пост в Telegram'
+    : sourceHost==='vk.com'||sourceHost==='vk.ru'?'Пост ВКонтакте'
+    : sourceHost==='avito.ru'?'Объявление на Авито':'На сайте продавца'
+  : null;
+ const privateSeller=h.shop?.sellerType==='private';
+ const seller=(h.seller||h.shop?.name||(h.kind==='store'?h.title:'')).trim();
+ const image=h.image&&!/(?:no[-_]?image|no[-_]?photo|placeholder|default_part)/i.test(h.image)?h.image:null;
+ async function openDetails(){
+  if(expanded){setExpanded(false);return;}
+  setError('');
+  if(details){setExpanded(true);return;}
+  setLoading(true);
+  try{
+   if(!h.detailsKey){setDetails({title:h.title,description:h.description,phone:h.phone,site:h.site,hours:h.hours,source:h.source});setExpanded(true);return;}
+   const response=await fetch('/api/search/details',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:h.detailsKey})});
+   const body=await response.json() as SearchDetails&{error?:string};
+   if(!response.ok)throw Error(body.error||'Не удалось открыть контакты.');
+   setDetails(body);setExpanded(true);
+  }catch(e){setError((e as Error).message);}finally{setLoading(false);}
+ }
+ const phone=details?.phone?.split(';')[0].trim(),phoneHref=phone?'tel:'+phone.replace(/[^+\d]/g,''):'';
+ const website=safeHTTP(details?.site)||safeHTTP(details?.source),source=safeHTTP(details?.source);
+ return <article id={'search-hit-'+h.id} tabIndex={-1} data-selected={selected||undefined} onClick={onSelect} onFocus={onSelect} className={'search-hit nearby-card'+(h.kind==='product'?' nearby-product':'')+(h.product&&h.shop&&h.status==='seller-confirmed'?' nearby-listing':'')}>
+  <ResultImage key={image||h.source} src={image} title={h.title}/>
+  <div className="nearby-card-body">
+   <div className="nearby-card-heading"><h2><button type="button" className="nearby-title" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{h.title}</button></h2>{h.price!==null?<strong>{h.product?.priceMode==='free'?'Бесплатно':money(h.price)}</strong>:h.product?.priceMode==='negotiable'?<strong>Договорная</strong>:h.kind==='product'?<span className="nearby-price-unknown">Цена не указана</span>:null}</div>
+   {sourceLabel&&<small className="nearby-source-label">{sourceLabel}</small>}
+   {(h.model||h.brand)&&<p className="nearby-model">{[h.brand,h.model].filter(Boolean).join(' · ')}</p>}
+   {expanded&&!!h.characteristics?.length&&<p className="nearby-specs">{h.characteristics.map(x=>x.name+': '+x.value).join(' · ')}</p>}
+   {expanded&&h.rating&&<p className="nearby-rating">★ {h.rating.value} / {h.rating.best}{h.rating.count?' · '+h.rating.count+' оценок':''} · по данным источника</p>}
+   {seller&&seller!==h.title&&<p className="nearby-card-seller">{privateSeller?'Частный продавец · ':''}{seller}</p>}{h.product?.condition&&h.product.condition!=='unknown'&&<small>{h.product.condition==='used'?'Б/у':'Новый'}</small>}
+   <p className="search-hit-address"><MapPin size={14}/><span>{h.address?(h.city&&!h.address.toLocaleLowerCase().includes(h.city.toLocaleLowerCase())?h.city+', '+h.address:h.address):'Адрес пока не найден'}</span>{h.distanceKm!==null&&<b title="Расстояние по прямой">{h.distanceKm<1?Math.round(h.distanceKm*1000)+' м':h.distanceKm.toFixed(1)+' км'}</b>}</p>
+   <small className="nearby-availability">{h.sourceAvailability==='out_of_stock'?'Нет в наличии':h.status==='seller-confirmed'&&h.sourceAvailability==='in_stock'?(privateSeller?'Продаётся':'Есть в магазине'):h.kind==='product'?'Товар найден · наличие уточните':h.kind==='service'?'Стоимость и время записи уточните':'Наличие товара уточните'}</small>
+   <div className="nearby-card-actions">
+    {h.kind==='product'&&h.evidence==='search-index'&&h.price!==null&&<small>Цена из поискового фрагмента · уточните у продавца</small>}
+    {h.product&&h.shop?.chatAvailable&&<a href={'/messages?product='+encodeURIComponent(h.product.id)}><MessageCircle size={15}/>Написать продавцу</a>}
+    {route&&<a className="nearby-route" href={route} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('route_click',h.city)}><Navigation size={15}/>Маршрут</a>}
+    <button type="button" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{loading?'Открываем…':expanded?'Скрыть подробности':'Описание и контакты'}</button>
    </div>
-   <small>{h.source.startsWith('http')?<BuyerGateLink onAllowed={()=>trackProductEvent('seller_click',h.city,h.category)} href={h.source}>{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</BuyerGateLink>:<a href={h.source}>{h.source.includes('openstreetmap.org')?'OpenStreetMap · ODbL':'Источник'}</a>}{h.checkedAt?' · Получено '+new Date(h.checkedAt).toLocaleDateString('ru-RU'):''}</small>
+   {error&&<p role="alert">{error}</p>}
+   {expanded&&details&&<div className="nearby-card-details">
+    {details.description?<p className="nearby-description">{details.description}</p>:h.kind==='product'&&<p>Описание товара не опубликовано в источнике.</p>}
+    {details.hours&&<p>{details.hours}</p>}
+    {phoneHref&&<a href={phoneHref} onClick={()=>trackProductEvent('phone_click',h.city)}><Phone size={14}/>{phone}</a>}
+    {website&&<a href={website} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('seller_click',h.city)}><ExternalLink size={14}/>Сайт продавца</a>}
+    {source&&source!==website&&<a href={source} target="_blank" rel="noreferrer">Источник</a>}
+    {h.checkedAt&&Number.isFinite(Date.parse(h.checkedAt))&&<p>Данные от {new Date(h.checkedAt).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>}
+    {!phoneHref&&!website&&<p>Контакты пока не опубликованы.</p>}
+   </div>}
   </div>
  </article>;
 }
-function CardImage({src,alt}:{src:string|null;alt:string}){const [failed,setFailed]=useState(false),fallback=!src||failed;return <div className={'search-hit-image'+(fallback?' branded-fallback':'')}>{fallback?<><img src="/favicon.svg" alt=""/><span>Фото у источника нет</span></>:<img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>}</div>}
+function ResultImage({src,title}:{src:string|null;title:string}){
+ const [failed,setFailed]=useState(false);
+ return <div className="nearby-card-image">{src&&!failed?<img src={src} alt={title} loading="lazy" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>:<img className="nearby-logo" src="/favicon.svg" alt="Фото не опубликовано" loading="eager"/>}</div>;
+}

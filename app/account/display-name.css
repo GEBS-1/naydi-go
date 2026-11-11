@@ -1,0 +1,6 @@
+.account-display-name{margin:12px 0}
+.account-display-name label{font-weight:700}
+.account-display-name p{margin:4px 0;font-size:14px}
+.account-display-name p:empty{display:none}
+.account-display-name-fields{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.account-display-name-fields input{flex:1 1 200px;min-width:0;box-sizing:border-box;font:inherit;padding:10px 12px;border:1px solid #cbd9ef;border-radius:10px;min-height:44px}

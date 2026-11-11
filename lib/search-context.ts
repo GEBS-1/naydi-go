@@ -1,6 +1,7 @@
 export type SearchContext={query:string;maxPrice?:number;radiusKm?:number;sort?:'relevance'|'price'|'price-distance';newOnly?:boolean};
+export function isSearchRefinement(message:string){return /^(?:нет[, ]*(?:лучше|только|дешевле)|покажи (?:похож|дешевле|ближе)|только |не дальше |дешевле|лучше |этот вариант|ищи ближе|а что есть (?:похож|ближе|по дороге)|до\s+\d)/iu.test(message.trim());}
 export function resolveSearch(message:string,previous?:SearchContext):SearchContext {
- const refinement=/^(?:нет[, ]*|покажи |только |не дальше |дешевле|лучше |этот вариант|ищи ближе|а что есть)/iu.test(message.trim());
+ const refinement=isSearchRefinement(message);
  const context:SearchContext=refinement&&previous?{...previous}:{query:message};
  const budget=message.match(/(?:до|не дороже|бюджет)\s*(\d[\d\s]*)(?:[,.](\d{1,2}))?\s*(тыс(?:яч)?\.?|к\b)?/iu);
  if(budget){const amount=Number(budget[1].replace(/\s/g,''))+(budget[2]?Number('0.'+budget[2]):0);context.maxPrice=amount*(budget[3]?1000:1);}

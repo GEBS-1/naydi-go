@@ -14,7 +14,7 @@ export function microdata(html:string):Item[]{
   const attrs:Record<string,string>={};for(const a of token.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g))attrs[a[1].toLowerCase()]=entities(a[2]??a[3]??a[4]??'');
   const parent=stack.at(-1)?.scope||null;let scope=parent,prop=attrs.itemprop||'',target=parent;
   if(/\bitemscope(?:\s|=|\/?>)/i.test(token)){scope={'@type':(attrs.itemtype||'').split('/').at(-1)};roots.push(scope);if(parent&&prop)add(parent,prop,scope);prop='';target=null;}
-  const attrValue=attrs.content??(tag==='a'||tag==='link'?attrs.href:tag==='img'?attrs.src:undefined);
+  const attrValue=attrs.content??(tag==='a'||tag==='link'?attrs.href:tag==='img'?(attrs['data-src']||attrs['data-original']||attrs.src):undefined);
   if(prop&&target&&attrValue!==undefined){add(target,prop,attrValue);prop='';}
   stack.push({tag,scope,prop,target,value:''});if(/^(meta|link|img|input|br|hr|source|wbr|area|base|embed|param|track)$/.test(tag)||token.endsWith('/>'))close();
  }

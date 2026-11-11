@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {z} from 'zod';
 import {sameOrigin} from '@/lib/onboarding';
 import {guest,quota,privateResponse} from '@/lib/discovery-server';
@@ -19,9 +19,11 @@ async function searchJourney(req:Request){const started=performance.now();try{
  sameOrigin(req);const b=input.parse(await req.json()),who=await guest(req);await quota(who.key,'journey',12);await quota('global','routing',40);
  if(km(b.start,b.end)>250)throw Error('В MVP доступны маршруты до 250 км по прямой. Укажите более близкий пункт.');
  const route=await roadRoute(env.VALHALLA_URL||'https://valhalla1.openstreetmap.de',[b.start,b.end],b.mode);
+ const intent=journeyIntent(b.query);
+ if(intent.routeOnly)return privateResponse({route,results:[],failed:0,limited:false,warnings:[]},200,who.cookie);
  const lats=route.points.map(p=>p.lat),lngs=route.points.map(p=>p.lng);
  const bounds:Bounds=[Math.min(...lats)-.04,Math.min(...lngs)-.06,Math.max(...lats)+.04,Math.max(...lngs)+.06];
- const search=await runSearch({query:journeyIntent(b.query).query,city:b.city,bounds,near:b.start});
+ const search=await runSearch({query:intent.query,city:b.city,bounds,near:b.start});
  const candidates=search.hits.filter(h=>h.point&&h.address).map(h=>({hit:h,d:distanceToPath(h.point!,route.points)})).filter(h=>h.d<=(b.mode==='auto'?5000:1200)).sort((a,b)=>a.d-b.d);
  const grouped=new Map<string,typeof candidates>();
  for(const candidate of candidates){const key=candidate.hit.point!.lat.toFixed(5)+','+candidate.hit.point!.lng.toFixed(5);grouped.set(key,[...(grouped.get(key)||[]),candidate]);}

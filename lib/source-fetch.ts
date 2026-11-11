@@ -1,8 +1,10 @@
-// Only explicitly reviewed public seller hosts can be fetched. Unknown search URLs
-// remain clickable sources. This prevents search snippets/LLM output becoming an SSRF proxy.
-const hosts=['kazan.gomeovet.ru','kazan.zapovednik96.ru','kzn.dogeat.ru','leogang.ru','velosky.ru','kzn.velo-shop.ru','kaz.android-market.net','kazan-mall.istudio-kazan.ru','kazan.richfamily.ru','kazan.shinservice.ru','detmir.ru','www.detmir.ru','kazan.detmir.ru','poryadok.ru','kazan.poryadok.ru','www.vseinstrumenti.ru','kazan.vseinstrumenti.ru','www.220-volt.ru','www.toy.ru','toy.ru','www.igromagazin.ru','igromagazin.ru','www.labirint.ru','www.chitai-gorod.ru','kazan.lemanapro.ru','lemanapro.ru','www.mvideo.ru','www.dns-shop.ru',
- 'megakrepezh.ru','www.megakrepezh.ru','kazan.tatmetiz.ru','kazan.novocraft.ru','skskazan.ru','www.skskazan.ru','autocraft-kzn.ru','www.autocraft-kzn.ru','virage-kzn.ru','www.virage-kzn.ru','gazzap116.ru','www.gazzap116.ru','maikorcos.com','www.maikorcos.com','koreavisage.ru','www.koreavisage.ru','makpets.ru','www.makpets.ru','biosfera-kazan.ru','www.biosfera-kazan.ru','fenixkz.ru','www.fenixkz.ru','rybalka-rt.ru','www.rybalka-rt.ru','signalka16.ru','www.signalka16.ru'];
-export function allowedSource(raw:string){try{const u=new URL(raw);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&hosts.includes(u.hostname)&&!u.hash?u:null;}catch{return null;}}
+// Search results may come from any public seller. Fetch only public HTTPS hosts,
+// never follow redirects, and respect robots.txt before reading product HTML.
+export function allowedSource(raw:string){
+ const url=merchantSource(raw);
+ if(!url||/(?:^|\.)(?:test|invalid|example|localhost|local|internal|lan|home|arpa)$/.test(url.hostname))return null;
+ return url;
+}
 // Used only after an administrator has reviewed a merchant application.
 // Unknown URLs never reach this path from public search requests.
 export function merchantSource(raw:string){try{const u=new URL(raw),host=u.hostname.toLowerCase();if(u.protocol!=='https:'||u.username||u.password||u.port||u.hash||host==='localhost'||host.endsWith('.local')||host.endsWith('.internal')||host.includes(':')||/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)||!host.includes('.'))return null;return u;}catch{return null;}}

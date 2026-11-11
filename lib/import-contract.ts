@@ -4,7 +4,7 @@ export type ImportFormat='csv'|'xlsx';
 export const importFields=['name','category','brand','model','description','features','price','quantity','sku','keywords','imageUrls','sourceUrl','published'] as const;
 export type ImportField=typeof importFields[number];
 export type ColumnMapping=Record<ImportField,number|null>;
-export interface ImportRow {name:string;category:string;brand:string;model:string;description:string;features:string;price:number;quantity:number;sku:string;keywords:string;imageUrls:string[];sourceUrl:string;published:boolean}
+export interface ImportRow {name:string;category:string;brand:string;model:string;description:string;features:string;price:number|null;quantity:number|null;sku:string;keywords:string;imageUrls:string[];sourceUrl:string;published:boolean}
 export interface ImportIssue {row:number;field:keyof ImportRow;message:string}
 export interface ImportPreview {format:ImportFormat;rows:ImportRow[];issues:ImportIssue[];totalRows:number}
 export interface ImportTable {format:ImportFormat;headers:string[];rows:string[][]}
@@ -16,7 +16,7 @@ const clean=(value:unknown)=>String(value??'').replace(/^\uFEFF/,'').replace(/\s
 const key=(value:string)=>clean(value).toLowerCase().replace(/[_-]+/g,' ');
 export function emptyMapping():ColumnMapping{return Object.fromEntries(importFields.map(field=>[field,null])) as unknown as ColumnMapping;}
 export function autoMapping(headers:string[]):ColumnMapping{const mapping=emptyMapping();for(const field of importFields){const index=headers.findIndex(header=>aliases[field].includes(key(header)));if(index>=0)mapping[field]=index;}return mapping;}
-function decimal(value:string){const normalized=value.replace(/[\s ₽$]/g,'').replace(',','.');return normalized&&/^-?\d+(?:\.\d+)?$/.test(normalized)?Number(normalized):NaN;}
+function decimal(value:string){if(!value)return null;const normalized=value.replace(/[\s ₽$]/g,'').replace(',','.');return normalized&&/^-?\d+(?:\.\d+)?$/.test(normalized)?Number(normalized):NaN;}
 function boolean(value:string,fallback:boolean){if(!value)return fallback;const v=key(value);if(['1','true','yes','y','да','опубликован','активен'].includes(v))return true;if(['0','false','no','n','нет','черновик','скрыт'].includes(v))return false;return fallback;}
 function urls(value:string){return value.split(/[;,\n]+/).map(clean).filter(Boolean).slice(0,5);}
 function validURL(value:string){if(!value)return true;try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password;}catch{return false;}}
@@ -28,8 +28,8 @@ export function buildImportPreview(table:ImportTable,mapping:ColumnMapping,defau
   const row:ImportRow={name:get(raw,'name'),category:get(raw,'category')||defaults.category,brand:get(raw,'brand'),model:get(raw,'model'),description:get(raw,'description'),features:get(raw,'features'),price,quantity,sku:get(raw,'sku'),keywords:get(raw,'keywords'),imageUrls:urls(get(raw,'imageUrls')),sourceUrl:get(raw,'sourceUrl'),published:boolean(get(raw,'published'),defaults.published)};
   if(!row.name||row.name.length>200)issues.push({row:rowNumber,field:'name',message:'Укажите название до 200 символов'});
   if(!categories.includes(row.category as typeof categories[number]))issues.push({row:rowNumber,field:'category',message:'Выберите одну из категорий НайдиGo'});
-  if(!Number.isFinite(row.price)||row.price<0||row.price>1e9)issues.push({row:rowNumber,field:'price',message:'Цена должна быть числом от 0'});
-  if(!Number.isInteger(row.quantity)||row.quantity<0||row.quantity>1e7)issues.push({row:rowNumber,field:'quantity',message:'Остаток должен быть целым числом от 0'});
+  if(row.price!==null&&(!Number.isFinite(row.price)||row.price<0||row.price>1e9))issues.push({row:rowNumber,field:'price',message:'Цена должна быть числом от 0 или оставлена пустой'});
+  if(row.quantity!==null&&(!Number.isInteger(row.quantity)||row.quantity<0||row.quantity>1e7))issues.push({row:rowNumber,field:'quantity',message:'Остаток должен быть целым числом от 0 или оставлен пустым'});
   if(row.sourceUrl&&!validURL(row.sourceUrl))issues.push({row:rowNumber,field:'sourceUrl',message:'Источник должен быть HTTPS URL'});
   for(const image of row.imageUrls)if(!validURL(image))issues.push({row:rowNumber,field:'imageUrls',message:'Фото должно быть HTTPS URL'});
   if(row.published&&!row.imageUrls.length&&!row.sourceUrl)issues.push({row:rowNumber,field:'published',message:'Для публикации нужно фото или URL источника'});

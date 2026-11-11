@@ -5,6 +5,10 @@ export type PurchaseFocus={query:string;question:string|null};
 // informational search.
 export function purchaseFocus(message:string):PurchaseFocus|null {
  const text=message.replace(/\s+/g,' ').trim();
+ if(/раскраск/iu.test(text)){
+  const cars=/машин|тачк|автомобил/iu.test(text);
+  return {query:cars?'детская раскраска с машинками'+(/тачк/iu.test(text)?' Тачки':''):text.replace(/^(?:а[- ]?а[, ]*|ну[, ]*|мне\s+|нужна\s+|найди\s+)+/iu,'').replace(/\s+в\s+(?:ближайш[а-яё]*|соседн[а-яё]*)\s+магазин[а-яё]*[.!?]*$/iu,'').trim(),question:null};
+ }
  // Verb/task phrasing only. A noun query such as «сверло по бетону» must stay
  // a drill-bit search and must not be silently rewritten to «перфоратор».
  const drillingTask=/(?:просверл(?:ить|иват|иваю|ил|ите)|сверл(?:ить|ю|им|ите|ение))[а-яё]*[\s\S]{0,50}(?:бетон|кирпич)|(?:бетон|кирпич)[\s\S]{0,50}(?:просверл(?:ить|иват|иваю|ил|ите)|сверл(?:ить|ю|им|ите|ение))[а-яё]*/iu;

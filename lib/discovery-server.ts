@@ -1,11 +1,11 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {db} from '@/db';
 import {generatePlan} from './plan-ai';
 import {routerCall} from './router-gateway';
 import {hash,token} from './onboarding';
 import {localDiscovery,safeUrl,type WebSource,type PlanItem} from './discovery';
 import type {Product,Shop} from './model';
-export async function publicIndex(){const shops=await db().prepare("SELECT data,visibility FROM shops WHERE visibility='public' AND COALESCE(json_extract(data,'$.demo'),0)=0").all<{data:string;visibility:'public'}>();const products=await db().prepare("SELECT p.data FROM products p JOIN shops s ON s.id=p.store_id WHERE p.published=1 AND s.visibility='public' AND COALESCE(json_extract(p.data,'$.demo'),0)=0 AND COALESCE(json_extract(p.data,'$.testOnly'),0)=0 AND COALESCE(json_extract(s.data,'$.demo'),0)=0").all<{data:string}>();return {shops:shops.results.map(r=>{const s={...JSON.parse(r.data),visibility:r.visibility};delete s.notes;delete s.contact;return s as Shop;}),products:products.results.map(r=>JSON.parse(r.data) as Product)};}
+export async function publicIndex(){const shops=await db().prepare("SELECT data,visibility,owner FROM shops WHERE visibility='public' AND COALESCE(json_extract(data,'$.demo'),0)=0").all<{data:string;visibility:'public';owner:string|null}>();const products=await db().prepare("SELECT p.data FROM products p JOIN shops s ON s.id=p.store_id WHERE p.published=1 AND s.visibility='public' AND COALESCE(json_extract(p.data,'$.demo'),0)=0 AND COALESCE(json_extract(p.data,'$.testOnly'),0)=0 AND COALESCE(json_extract(s.data,'$.demo'),0)=0").all<{data:string}>();return {shops:shops.results.map(r=>{const s={...JSON.parse(r.data),visibility:r.visibility,chatAvailable:!!r.owner&&/^(telegram|max):[^:]+$/.test(r.owner)};delete s.notes;delete s.contact;delete s.sellerName;return s as Shop;}),products:products.results.map(r=>JSON.parse(r.data) as Product)};}
 export async function searchLocal(query:string,city:string,near?:{lat:number;lng:number}){const index=await publicIndex();return localDiscovery(index.products,index.shops,query,city,near);}
 export async function guest(req:Request){const old=req.headers.get('cookie')?.match(/(?:^|;\s*)ng_client=([a-f0-9]{64})/)?.[1];const value=old||token();return {key:await hash(value),cookie:old?null:`ng_client=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${new URL(req.url).protocol==='https:'?'; Secure':''}`};}
 export const privateResponse=(body:unknown,status=200,cookie?:string|null)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store',...(cookie?{'Set-Cookie':cookie}:{})}});

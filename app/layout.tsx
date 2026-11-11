@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import YandexMetrika from "./yandex-metrika";
 import VisitTracker from './visit-tracker';
+import LegalConsent from './legal-consent';
 import "./globals.css";
 import './launch-polish.css';
+import './legal-consent.css';
 
 export const metadata: Metadata = {
   title: "НайдиGo — товары рядом",
@@ -13,5 +15,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ru"><body><YandexMetrika /><VisitTracker />{children}</body></html>;
+  return <html lang="ru"><body><YandexMetrika /><VisitTracker />{children}<LegalConsent /></body></html>;
 }

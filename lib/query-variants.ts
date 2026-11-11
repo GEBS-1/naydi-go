@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {routerCall} from './router-gateway';
 const schema=z.object({queries:z.array(z.string().trim().min(3).max(200)).min(1).max(2)});
 export async function queryVariants(query:string,city:string){

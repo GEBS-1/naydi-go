@@ -1,14 +1,24 @@
 import {z} from 'zod';
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {db} from '@/db';
+import {adminPasswordSession} from '@/lib/admin-password';
 export const url=z.union([z.literal(''),z.string().url().max(1000).refine(v=>/^https?:\/\//.test(v),'Только http/https')]);
 const social=(hosts:string[])=>url.refine(v=>!v||hosts.includes(new URL(v).hostname.toLowerCase()),'Проверьте домен ссылки');
 export const draftSchema=z.object({addressConfirmed:z.boolean().default(false),name:z.string().trim().min(1).max(200),category:z.string().trim().min(1).max(200),description:z.string().max(4000).default(''),contact:z.string().max(200).default(''),phone:z.string().max(100).default(''),email:z.union([z.literal(''),z.string().email()]).default(''),city:z.string().max(100).default('Казань'),street:z.string().max(300).default(''),lat:z.number().min(-90).max(90).nullable().default(null),lng:z.number().min(-180).max(180).nullable().default(null),hours:z.string().max(300).default('Уточнить часы работы'),site:url.default(''),vk:social(['vk.com','www.vk.com','vk.ru']).default(''),telegram:social(['t.me','telegram.me']).default(''),max:social(['max.ru','www.max.ru']).default(''),photos:z.array(z.string().regex(/^\/api\/photos\/[a-f0-9-]{36}$/)).max(10).default([]),source:url.default(''),checkedAt:z.string().datetime().nullable().default(null),notes:z.string().max(4000).default('')});
-export const importedProduct=z.object({id:z.string().max(80).optional(),name:z.string().trim().min(1).max(250),category:z.string().min(1).max(200),brand:z.string().max(200).default(''),model:z.string().max(200).default(''),description:z.string().max(4000).default(''),features:z.string().max(4000).default(''),price:z.number().min(0).max(1e9).nullable(),priceFrom:z.boolean().default(false),quantity:z.number().int().min(0).nullable().default(null),stockConfirmed:z.boolean().default(false),sku:z.string().max(200).default(''),photos:z.array(z.string().regex(/^\/api\/photos\/[a-f0-9-]{36}$/)).max(5).default([]),source:url.refine(Boolean,'Нужна ссылка на источник'),checkedAt:z.string().datetime(),imageSource:url.default(''),imagePermission:z.string().max(1000).default(''),keywords:z.string().max(1000).default(''),testOnly:z.boolean().default(false)}).refine(p=>!p.stockConfirmed||p.quantity!==null,'Подтверждённому остатку нужно количество');
+export const importedProduct=z.object({id:z.string().max(80).optional(),name:z.string().trim().min(1).max(250),category:z.string().min(1).max(200),brand:z.string().max(200).default(''),model:z.string().max(200).default(''),description:z.string().max(4000).default(''),features:z.string().max(4000).default(''),price:z.number().min(0).max(1e9).nullable(),priceConfirmed:z.boolean().default(false),priceFrom:z.boolean().default(false),quantity:z.number().int().min(0).nullable().default(null),stockConfirmed:z.boolean().default(false),sku:z.string().max(200).default(''),photos:z.array(z.string().regex(/^\/api\/photos\/[a-f0-9-]{36}$/)).max(5).default([]),source:url.refine(Boolean,'Нужна ссылка на источник'),checkedAt:z.string().datetime(),imageSource:url.default(''),imagePermission:z.string().max(1000).default(''),keywords:z.string().max(1000).default(''),testOnly:z.boolean().default(false)}).refine(p=>!p.stockConfirmed||p.quantity!==null,'Подтверждённому остатку нужно количество').refine(p=>!p.priceConfirmed||p.price!==null,'Подтверждённой цене нужно значение');
 export type DraftInput=z.infer<typeof draftSchema>;
 export type ImportedInput=z.infer<typeof importedProduct>;
-export async function actor(){const user=await getChatGPTUser();return {user,admin:!!user&&!user.ownerSession&&!!env.ADMIN_EMAIL&&user.email.toLowerCase()===env.ADMIN_EMAIL.toLowerCase()};}
+export async function actor(){
+ const user=await getChatGPTUser();
+ const admin=!!user&&!user.ownerSession&&(user.adminSession===true||!!env.ADMIN_EMAIL&&user.email.toLowerCase()===env.ADMIN_EMAIL.toLowerCase());
+ return {user,admin};
+}
+export async function moderationActor(req:Request){
+ const cookie=req.headers.get('cookie');
+ if(adminPasswordSession(cookie))return {admin:true,user:{userId:'admin:moderation',displayName:'Администратор',email:'',fullName:null}};
+ return actor();
+}
 export function token(){return Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');}
 export async function hash(value:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,'0')).join('');}
 export const privateHeaders={'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow, noarchive'};

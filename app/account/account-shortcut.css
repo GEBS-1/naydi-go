@@ -1,0 +1,6 @@
+a.account-shortcut{display:inline-flex;align-items:center;gap:6px;min-height:40px;min-width:0;padding:0 9px;border-radius:10px;background:#edf4ff;color:#1258af;font-size:13px;font-weight:700;text-decoration:none}
+.account-shortcut svg{flex:none}
+.account-shortcut span{max-width:105px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-top{flex-wrap:wrap;align-items:center}
+@media(max-width:580px){.d-header .account-shortcut span{max-width:65px}}
+@media(max-width:360px){.d-header .account-shortcut span{display:none}}

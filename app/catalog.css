@@ -2,3 +2,16 @@
 .ng-app h1,.ng-app h2,.ng-app h3{font-weight:700}.ng-footer-links{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;color:#1265ef}.ng-app .d-opening{padding-top:28px}
 .ng-import{margin:18px 0 26px}.ng-import summary{cursor:pointer;font-size:18px;font-weight:700}.ng-import-defaults{display:flex;gap:18px;align-items:end;flex-wrap:wrap;margin:18px 0}.ng-import-mapping{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.ng-import-preview{overflow:auto;margin:16px 0}.ng-import-preview table{width:100%;border-collapse:collapse;font-size:13px}.ng-import-preview th,.ng-import-preview td{text-align:left;padding:9px;border-bottom:1px solid #e4e9f1;white-space:nowrap}.ng-import-errors{padding:14px;border-radius:12px;background:#fff0f1;color:#9b2637;margin:14px 0}.ng-import-errors p{margin:5px 0}@media(max-width:760px){.ng-import-mapping{grid-template-columns:1fr 1fr}}@media(max-width:480px){.ng-import-mapping{grid-template-columns:1fr}}
 .ng-app .ng-form input:not([type=checkbox]):not([type=file]),.ng-app .ng-form select,.ng-app .ng-form textarea,.ng-app .ng-question textarea,.ng-app .ng-answer input,.ng-app .ng-note input,.ng-app .ng-note textarea{width:100%;border:1px solid #e0e6ef;border-radius:12px;background:#f9fafc;padding:12px;color:#162131}.ng-app .d-main>h1{font-size:clamp(28px,4vw,40px);line-height:1.15;margin-bottom:24px}.ng-app .d-main h2{margin:18px 0 14px}.ng-app .d-sidebar select{width:100%;border:1px solid #dce4f0;border-radius:10px;padding:8px;background:white}
+
+.ng-attrs{margin:0 0 12px;padding-left:18px;line-height:1.5}.ng-attrs b{font-weight:600}
+
+.d-link-btn{border:0;background:none;color:#0759d5;font:inherit;font-weight:700;cursor:pointer;padding:8px 0;text-align:left}
+.product-form-quick .d-create-layout.quick{align-items:start}
+
+.ai-card-panel{margin:0 0 22px;padding:16px;border-radius:16px;background:linear-gradient(160deg,#eef5ff,#f8fbff);border:1px solid #cfe0f7}
+.ai-card-panel h2{margin:0 0 6px;font-size:18px}
+.ai-card-panel h3{margin:14px 0 8px;font-size:14px}
+.ai-card-panel .d-fine.ai-ok{color:#14723b;font-weight:650}
+.ai-clarify{margin-top:14px;padding-top:12px;border-top:1px solid #cfe0f7;display:grid;gap:12px}
+.ai-clarify h3{margin:0;font-size:15px}
+.ai-clarify .d-btn{justify-self:start}

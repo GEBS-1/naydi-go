@@ -9,6 +9,7 @@ declare namespace Cloudflare {
     AUTH_BASE_URL?: string;
     YANDEX_CLIENT_ID?: string;
     ADMIN_BUYER_ID?: string;
+    NAYDI_ADMIN_PASSWORD?: string;
     YANDEX_CLIENT_SECRET?: string;
     YANDEX_AUTH_ENABLED?: string;
     TELEGRAM_BOT_TOKEN?: string;
@@ -29,11 +30,13 @@ declare namespace Cloudflare {
     PERPLEXITY_API_KEY?: string;
     ROUTERAI_WEB_MODE?: string;
     ROUTERAI_WEB_MODEL?: string;
-    API_MONTHLY_LIMIT_RUB?: string;
     API_MAX_CALL_RUB?: string;
-    API_UNCERTAIN_LIMIT_RUB?: string;
     ROUTERAI_API_KEY?: string;
     ROUTERAI_MODEL?: string;
+    /** Vision model for product photo → card draft (default qwen3-vl) */
+    ROUTERAI_VISION_MODEL?: string;
+    /** off — skip cheap agent focus labels; default on for nearby-business search */
+    AGENT_SEARCH?: string;
     ADMIN_EMAIL?: string;
     OPENAI_API_KEY?: string;
     OPENAI_MODEL?: string;

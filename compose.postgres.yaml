@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: naydigo
+      POSTGRES_USER: naydigo
+      POSTGRES_PASSWORD: ${NAYDI_POSTGRES_PASSWORD:?Set a unique database password}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - naydigo_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U naydigo -d naydigo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  naydigo_postgres:

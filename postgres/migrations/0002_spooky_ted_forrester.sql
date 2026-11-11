@@ -1,0 +1,2 @@
+DROP INDEX "idx_shops_single_social_owner";--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_shops_single_social_owner" ON "shops" USING btree ("owner" text_ops) WHERE ((owner ~~ 'telegram:%'::text) OR (owner ~~ 'max:%'::text) OR (owner ~~ 'vk:%'::text));

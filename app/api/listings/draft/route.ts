@@ -1,0 +1,11 @@
+import {z} from 'zod';
+import {db} from '@/db';
+import {sellerIdentity,sellerFailure} from '@/lib/seller-access';
+import {privateResponse,quota} from '@/lib/discovery-server';
+import {sameOrigin,checkUploadOwnership} from '@/lib/onboarding';
+import {listingDraftSchema} from '@/lib/listing-draft-schema';
+export async function GET(req:Request){try{const who=await sellerIdentity(req);const row=await db().prepare('SELECT data,version FROM listing_drafts WHERE owner=?').bind(who.key).first<{data:string;version:number}>();return privateResponse({draft:row?JSON.parse(row.data):null,version:row?.version||0});}catch(e){const f=sellerFailure(e);return privateResponse({error:f?.error||'Не удалось открыть черновик'},f?.status||503);}}
+export async function PUT(req:Request){try{sameOrigin(req);const who=await sellerIdentity(req);await quota(who.key,'listing-draft',240);if(Number(req.headers.get('content-length')||0)>24000)return privateResponse({error:'Черновик слишком большой'},413);const {draft,version}=z.object({draft:listingDraftSchema,version:z.number().int().min(0)}).parse(await req.json());const previous=await db().prepare('SELECT p.data FROM products p JOIN shops s ON s.id=p.store_id WHERE p.id=? AND s.owner=?').bind(draft.id,who.key).first<{data:string}>();const previousPhotos:string[]=previous?JSON.parse(previous.data).photos||[]:[];await checkUploadOwnership(draft.photos.filter(photo=>!previousPhotos.includes(photo)),who.key);
+ const result=version===0?await db().prepare('INSERT INTO listing_drafts(owner,data,version,updated_at) VALUES(?,?,1,?) ON CONFLICT(owner) DO NOTHING').bind(who.key,JSON.stringify(draft),Date.now()).run():await db().prepare('UPDATE listing_drafts SET data=?,version=version+1,updated_at=? WHERE owner=? AND version=?').bind(JSON.stringify(draft),Date.now(),who.key,version).run();
+ if(!result.meta.changes)return privateResponse({error:'Черновик изменён в другой вкладке. Обновите страницу, чтобы открыть сохранённую версию.'},409);return privateResponse({ok:true,version:version+1});
+}catch(e){const f=sellerFailure(e);return privateResponse({error:f?.error||(e instanceof z.ZodError?'Проверьте поля черновика':'Не удалось сохранить черновик')},f?.status||400);}}

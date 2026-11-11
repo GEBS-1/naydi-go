@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS listing_drafts(owner TEXT PRIMARY KEY REFERENCES buyer_accounts(id),data TEXT NOT NULL,version INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL);

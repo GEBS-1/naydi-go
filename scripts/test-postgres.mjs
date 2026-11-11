@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import {PGlite} from '@electric-sql/pglite';
+import {postgresDB} from './postgres-db.mjs';
+import {Pool} from 'pg';
+import {postgresSettings} from './postgres-migrate.mjs';
+import {randomBytes} from 'node:crypto';
+import {copyToPostgres} from './migrate-postgres.mjs';
+import {build} from 'esbuild';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import path from 'node:path';
+const sqlite=new DatabaseSync(':memory:');
+for(const f of readdirSync('drizzle').filter(f=>/^\d.*\.sql$/.test(f)).sort())sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
+sqlite.prepare('INSERT INTO buyer_accounts VALUES(?,?,?,?,?)').run('telegram:123','telegram','123','Seller',Date.now());
+sqlite.prepare('INSERT INTO buyer_identities VALUES(?,?,?,?)').run('telegram','123','telegram:123',Date.now());
+const native=process.argv.includes('--native');let control,nativePool,schema;
+if(native){control=new Pool({connectionString:postgresSettings().DATABASE_URL,max:1});schema='auth_test_'+randomBytes(8).toString('hex');await control.query('CREATE SCHEMA '+schema);nativePool=new Pool({connectionString:postgresSettings().DATABASE_URL,options:'-c search_path='+schema,max:5});}
+const pg=native?nativePool:new PGlite();
+try{
+const report=await copyToPostgres(sqlite,pg);
+await assert.rejects(copyToPostgres(sqlite,pg),/not empty/);
+// One PGlite connection; production uses a real pg Pool with exclusive transaction clients.
+const pool=native?nativePool:{query:(...args)=>pg.query(...args),connect:async()=>({query:(...args)=>pg.query(...args),release(){}})};
+const db=postgresDB(pool);globalThis.testPGDB=db;
+globalThis.testPGEnv={BUYER_AUTH_ENABLED:'1',AUTH_BASE_URL:'https://pg.test',TELEGRAM_BOT_TOKEN:'fixture',TELEGRAM_BOT_USERNAME:'fixture',TELEGRAM_WEBHOOK_SECRET:'fixture'};
+mkdirSync('artifacts/postgres',{recursive:true});
+await build({stdin:{contents:"export * from './lib/buyer-auth';export {quota,publicIndex} from './lib/discovery-server';",resolveDir:process.cwd()},bundle:true,platform:'node',format:'esm',outfile:'artifacts/postgres/bundle.mjs',plugins:[{name:'pg-test',setup(b){const stubs={'@/lib/server-env':'export const env=globalThis.testPGEnv;','@/db':'export const db=()=>globalThis.testPGDB;'};b.onResolve({filter:/.*/},a=>Object.hasOwn(stubs,a.path)?{path:a.path,namespace:'fixture'}:undefined);b.onLoad({filter:/.*/,namespace:'fixture'},a=>({contents:stubs[a.path],loader:'js'}));}}]});
+const api=await import(pathToFileURL(path.resolve('artifacts/postgres/bundle.mjs')));
+const req=cookie=>new Request('https://pg.test/api/buyer/auth',{method:'POST',headers:{origin:'https://pg.test',cookie:cookie||''}});
+const login=await api.startBuyerLogin(req(),'telegram');
+const challenge=new URL(login.url).searchParams.get('start'),hash=createHash('sha256').update(challenge).digest('hex');
+await db.prepare("UPDATE buyer_logins SET subject='123',name='Seller',code_hash='bot-confirmed-v1' WHERE hash=?").bind(hash).run();
+const cookie=(await api.pollBuyerLogin(req(login.cookie.split(';')[0]))).cookie.split(';')[0];
+assert.equal((await api.buyerIdentity(req(cookie))).id,'telegram:123');
+assert.equal((await db.prepare('SELECT COUNT(*) AS count FROM buyer_sessions').first()).count,1);
+await api.quota('test','pg',2);await api.quota('test','pg',2);await assert.rejects(api.quota('test','pg',2));
+const shop={id:'shop',name:'Shop',photos:['/api/photos/test'],demo:false};
+await db.prepare("INSERT INTO shops(id,owner,visibility,data) VALUES(?,?,'public',?)").bind('shop','telegram:123',JSON.stringify(shop)).run();
+await assert.rejects(db.prepare("INSERT INTO shops(id,owner,visibility,data) VALUES('other','telegram:123','draft','{}')").run());
+await db.prepare('INSERT INTO products(id,store_id,published,data) VALUES(?,?,1,?)').bind('product','shop',JSON.stringify({id:'product',name:'Ключи',demo:false,testOnly:false})).run();
+assert.equal((await api.publicIndex()).products.length,1);
+assert.equal((await db.prepare("SELECT s.id FROM shops s WHERE EXISTS(SELECT 1 FROM json_each(s.data,'$.photos') WHERE value=?)").bind('/api/photos/test').first()).id,'shop');
+await assert.rejects(db.batch([db.prepare("UPDATE shops SET visibility='draft' WHERE id='shop'"),db.prepare("INSERT INTO shops(id,data) VALUES('shop','{}')")]));
+assert.equal((await db.prepare("SELECT visibility FROM shops WHERE id='shop'").first()).visibility,'public');
+assert.equal((await db.prepare('SELECT MAX(expires_at) AS expiresAt FROM buyer_sessions').first()).expiresAt> Date.now(),true);
+await api.logoutBuyer(req(cookie));assert.equal(await api.buyerIdentity(req(cookie)),null);
+writeFileSync(native?'artifacts/postgres/native-auth-report.json':'artifacts/postgres/report.json',JSON.stringify({engine:native?'native PostgreSQL':'PGlite PostgreSQL',migration:report,verified:['copy hashes','refuse nonempty destination','persistent account/session','quota upsert','one shop constraint','public product search','photo JSON arrays','transaction rollback','logout'],externalBots:false},null,2));
+console.log('PASS PostgreSQL copy, constraints, auth, catalog, quotas, photos, rollback');
+}finally{sqlite.close();if(native){await nativePool.end();await control.query('DROP SCHEMA '+schema+' CASCADE');await control.end();}else await pg.close();}

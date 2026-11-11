@@ -20,7 +20,18 @@ def connect():
     client = paramiko.SSHClient()
     client.load_system_host_keys()
     client.set_missing_host_key_policy(paramiko.RejectPolicy())
-    client.connect(c['DEPLOY_HOST'], port=int(c.get('DEPLOY_PORT', '22')), username=c['DEPLOY_USER'], password=c.get('DEPLOY_SSH_PASSWORD'), timeout=20, auth_timeout=20, banner_timeout=20)
+    import socket,time
+    for attempt in range(8):
+        try:
+            client.connect(c['DEPLOY_HOST'], port=int(c.get('DEPLOY_PORT', '22')), username=c['DEPLOY_USER'], password=c.get('DEPLOY_SSH_PASSWORD'), timeout=6, auth_timeout=20, banner_timeout=20)
+            break
+        except (socket.timeout,TimeoutError):
+            client.close()
+            if attempt==7:raise
+            print('SSH timeout; retrying connection',flush=True)
+            time.sleep(2)
+            client=paramiko.SSHClient();client.load_system_host_keys();client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    client.get_transport().set_keepalive(10)
     return client
 
 def run(client, command):

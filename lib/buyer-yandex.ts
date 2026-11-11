@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {db} from '@/db';
 import {hash,token} from './onboarding';
 import {quota} from './discovery-server';

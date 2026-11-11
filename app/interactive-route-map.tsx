@@ -10,6 +10,19 @@ export default function InteractiveRouteMap({route,results,selected,onSelect}:{r
  const ref=useRef<HTMLDivElement>(null),drag=useRef<{id:number;x:number;y:number;baseX:number;baseY:number}|null>(null);
  const [width,setWidth]=useState(800),[zoomOffset,setZoom]=useState(0),[pan,setPan]=useState({x:0,y:0}),[tileError,setTileError]=useState(false);
  useEffect(()=>{const o=new ResizeObserver(entries=>setWidth(entries[0].contentRect.width));if(ref.current)o.observe(ref.current);return()=>o.disconnect();},[]);
+
+ useEffect(()=>{
+  const map=ref.current;
+  if(!map)return;
+  const zoom=(event:WheelEvent)=>{
+   if(!event.deltaY||(event.target instanceof Element&&event.target.closest('.finder-map-products')))return;
+   event.preventDefault();
+   setZoom(value=>Math.max(-2,Math.min(3,value+(event.deltaY<0?1:-1))));
+   setPan({x:0,y:0});
+  };
+  map.addEventListener('wheel',zoom,{passive:false});
+  return()=>map.removeEventListener('wheel',zoom);
+ },[]);
  const height=390,project=(p:Point)=>{const lat=Math.max(-85,Math.min(85,p.lat))*Math.PI/180;return [(p.lng+180)/360,(1-Math.log(Math.tan(lat)+1/Math.cos(lat))/Math.PI)/2];};
  const projected=[...route.points,...results.map(r=>r.shop)].map(project),xs=projected.map(p=>p[0]),ys=projected.map(p=>p[1]),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
  const fitX=Math.max(100,width-60)/(256*(maxX-minX||.001)),fitY=(height-60)/(256*(maxY-minY||.001)),fit=Math.floor(Math.log2(Math.min(fitX,fitY))),z=Math.max(3,Math.min(18,fit+zoomOffset)),scale=256*2**z,baseLeft=(minX+maxX)*scale/2-width/2,baseTop=(minY+maxY)*scale/2-height/2,left=baseLeft-pan.x,top=baseTop-pan.y;
@@ -17,7 +30,7 @@ export default function InteractiveRouteMap({route,results,selected,onSelect}:{r
  for(let x=Math.floor(left/256);x<=Math.floor((left+width)/256);x++)for(let y=Math.floor(top/256);y<=Math.floor((top+height)/256);y++)tiles.push(<img key={`${z}/${x}/${y}`} src={`https://tile.openstreetmap.org/${z}/${x}/${y}.png`} alt="" width={256} height={256} style={{position:'absolute',left:x*256-left,top:y*256-top,width:256,height:256,maxWidth:'none'}} onError={()=>setTileError(true)}/>);
  const origin=route.points[0];
  function centerOrigin(){const p=project(origin);setPan({x:width/2-(p[0]*scale-baseLeft),y:height/2-(p[1]*scale-baseTop)});}
- return <div className="journey-map journey-map-interactive" ref={ref} onWheel={e=>{e.preventDefault();setZoom(n=>Math.max(-2,Math.min(3,n+(e.deltaY<0?1:-1))));setPan({x:0,y:0});}} onPointerDown={e=>{if((e.target as Element).closest('button,a,g'))return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={id:e.pointerId,x:e.clientX,y:e.clientY,baseX:pan.x,baseY:pan.y};}} onPointerMove={e=>{const d=drag.current;if(d?.id===e.pointerId)setPan({x:d.baseX+e.clientX-d.x,y:d.baseY+e.clientY-d.y});}} onPointerUp={e=>{if(drag.current?.id===e.pointerId)drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}>
+ return <div className="journey-map journey-map-interactive" ref={ref} onPointerDown={e=>{if((e.target as Element).closest('button,a,g'))return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={id:e.pointerId,x:e.clientX,y:e.clientY,baseX:pan.x,baseY:pan.y};}} onPointerMove={e=>{const d=drag.current;if(d?.id===e.pointerId)setPan({x:d.baseX+e.clientX-d.x,y:d.baseY+e.clientY-d.y});}} onPointerUp={e=>{if(drag.current?.id===e.pointerId)drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}>
   <div className="journey-tiles" aria-hidden="true">{tiles}</div>
   <svg width="100%" height={height} role="img" aria-label="Интерактивный маршрут и подходящие магазины">
    <polyline points={route.points.map(p=>xy(p).join(',')).join(' ')} fill="none" stroke="white" strokeWidth="8"/>

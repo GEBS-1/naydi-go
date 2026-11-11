@@ -2,12 +2,13 @@ import {z} from 'zod';
 import {routerCall} from './router-gateway';
 import {cacheRead,cacheWrite} from './search-storage';
 import {cacheHit} from './search-usage';
-import {resolveSearch,type SearchContext} from './search-context';
+import {resolveSearch,isSearchRefinement,type SearchContext} from './search-context';
 import {purchaseFocus} from './purchase-query';
 
 const decision=z.object({query:z.string().trim().min(2).max(500),sort:z.enum(['relevance','price','price-distance']),newOnly:z.boolean(),journey:z.boolean(),question:z.string().max(180).nullable()}).strict();
 // Only search conditions. The model cannot supply offers, prices, addresses or points.
 export async function dialogContext(message:string,previous?:SearchContext){
+ if(!isSearchRefinement(message))previous=undefined;
  if(!previous&&/этот вариант|покажи похож|а что есть по дороге|ищи ближе/iu.test(message))return {context:{query:''} as SearchContext,question:'Что именно вы хотите найти? Напишите товар или услугу.'};
  const basic=resolveSearch(message,previous);
  const focused=purchaseFocus(message);

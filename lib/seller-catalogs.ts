@@ -1,14 +1,20 @@
+import {enrichOffers} from './offer-enrichment';
+import {businessLocations} from './local-business';
+import {locatePublishedBusinesses} from './web-places';
 import {fetchSource} from './source-fetch';
 import {extractOffers,pageHit} from './offer-extraction';
 import {relevantOffers} from './offer-relevance';
 import {cacheRead,cacheReadEntry,cacheWrite,acquireProvider,releaseProvider} from './search-storage';
 import {cacheHit} from './search-usage';
 import {recordFreeCall} from './api-budget';
+import {attachCatalogLocations,catalogLocationForUrl,catalogLocationHits as buildCatalogLocationHits} from './catalog-locations';
+import {autocraftQuery} from './seller-catalog-rules';
 import type {SearchHit} from './city-search';
 // Reviewed catalog URLs, NOT fabricated inventory. Every offer is fetched and parsed.
 // Regional catalogs can include delivery-only sellers; never infer a physical branch.
-type Catalog={matches:RegExp;url:string;location?:{address:string;point:{lat:number;lng:number};phone:string;source:string}};
+type Catalog={matches:RegExp;url:string;location?:{name?:string;category?:string;address:string;point:{lat:number;lng:number};phone?:string;source:string;pointSource?:string;complete?:boolean}};
 const catalogs:Catalog[]=[
+ {matches:/^(?!.*(?:женск|детск|девоч|мальчик)).*(?:куртк|пуховик)/iu,url:'https://kazan.mehamalina.ru/man/zimniye-kozhanyye-kurtki'},
  {matches:/свечн[а-яё]*\s+(?:ключ|головк)|(?:ключ|головк)[а-яё]*\s+(?:для\s+)?свеч/iu,url:'https://kazan.tatmetiz.ru/shop/car-accessories/kluch-svechnoi/'},
  {matches:/дрел|шурупов[её]рт/iu,url:'https://kazan.tatmetiz.ru/shop/instrument/elektroinstrument/elektroinstrument-akkumulyatornye-shurupoverty/'},
  {matches:/сверл|бур(?:ы|ов|ом)?/iu,url:'https://kazan.novocraft.ru/catalog/svyerla_novocraft/sverla_po_betonu_kamnyu_kirpichu_masonry/'},
@@ -16,7 +22,7 @@ const catalogs:Catalog[]=[
  {matches:/инструмент|оснастк|патрон.*дрел|переходник.*sds/iu,url:'https://skskazan.ru/catalog/aksessuary-dlya-elektroinstrumentov/'},
  {matches:/^дом и ремонт$|ремонт|строймат/iu,url:'https://megakrepezh.ru/krepezh/perforaciya'},
  {matches:/^дом и ремонт$|инструмент/iu,url:'https://kazan.tatmetiz.ru/shop/instrument/elektroinstrument/elektroinstrument-akkumulyatornye-shurupoverty/'},
- {matches:/автозапчаст|запчаст.*(?:иномарк|geely|tugella)|^авто(?:товары)?$/iu,url:'https://autocraft-kzn.ru/geely/tugella/dvigatel'},
+ {matches:autocraftQuery,url:'https://autocraft-kzn.ru/geely/tugella/dvigatel'},
  {matches:/автозапчаст|запчаст.*(?:газ|газел|уаз|паз)|^авто(?:товары)?$/iu,url:'https://gazzap116.ru/catalog/gazel/'},
  {matches:/корм|зоотовар|кош|кот|собак|щен/iu,url:'https://makpets.ru/'},
  {matches:/корм.*(?:кош|кот)|(?:кош|кот).*корм|^зоотовары$/iu,url:'https://kazan.gomeovet.ru/catalog1/tovari-dla-koshek/korm-dla-koshek/'},
@@ -33,27 +39,32 @@ const catalogs:Catalog[]=[
  {matches:/автозвук|автомагнитол|сабвуфер|автосигнализац|видеорегистратор|динамик.*авто/iu,url:'https://signalka16.ru/',location:{address:'ул. Фатыха Амирхана, 48, Казань',point:{lat:55.8434885,lng:49.1374226},phone:'+7 843 266-50-54',source:'https://signalka16.ru/'}},
 ];
 function matchingCatalogs(query:string){return catalogs.filter(c=>c.matches.test(query)).slice(0,2);}
-function cacheKey(city:string,url:string){return 'seller-catalog:v8:'+city.trim().toLowerCase()+':'+url;}
+function cacheKey(city:string,url:string){return 'seller-catalog:v13:'+city.trim().toLowerCase()+':'+url;}
+export function catalogLocationHits(query:string,city:string){return buildCatalogLocationHits(query,city,catalogs);}
 /** Read the last observed seller offers without waiting for network refresh. */
-export async function cachedCatalogOffers(query:string,city:string):Promise<{hits:SearchHit[];fresh:boolean}>{
+export async function cachedCatalogOffers(query:string,city:string,near?:{lat:number;lng:number}):Promise<{hits:SearchHit[];fresh:boolean}>{
  if(!/^казань$/iu.test(city.trim()))return {hits:[],fresh:true};
  const entries=await Promise.all(matchingCatalogs(query).map(({url})=>cacheReadEntry<SearchHit[]>(cacheKey(city,url))));
  const present=entries.filter((entry):entry is NonNullable<typeof entry>=>entry!==null);
  if(present.length)cacheHit();
- return {hits:relevantOffers(present.flatMap(entry=>entry.data),query,city),fresh:present.length>0&&present.every(entry=>entry.fresh)};
+ return {hits:relevantOffers(attachCatalogLocations(present.flatMap(entry=>entry.data),near),query,city),fresh:present.length>0&&present.every(entry=>entry.fresh)};
 }
-export async function catalogOffers(query:string,city:string):Promise<SearchHit[]>{
- if(!/^казань$/iu.test(city.trim()))return []; // Never label a regional offer as a different city.
- const sources=matchingCatalogs(query);
+export async function searchCatalogs(query:string,city:string,near?:{lat:number;lng:number}):Promise<{hits:SearchHit[];status:string}>{
+ if(!/^казань$/iu.test(city.trim()))return {hits:[],status:'not-covered'}; // Never label a regional offer as a different city.
+ const sources=matchingCatalogs(query);if(!sources.length)return {hits:[],status:'not-covered'};
  const batches=await Promise.all(sources.map(async({url,location})=>{
   const key=cacheKey(city,url),cached=await cacheRead<SearchHit[]>(key);
-  if(cached){cacheHit();return cached;}
-  const lock='seller:'+new URL(url).hostname;if(!await acquireProvider(lock,20000))return [];
+  if(cached){cacheHit();return {hits:cached,available:true,location};}
+  const lock='seller:'+new URL(url).hostname;if(!await acquireProvider(lock,20000))return {hits:[] as SearchHit[],available:false,location};
   const start=performance.now();let success=false;
-  try{const html=await fetchSource(url);const offers=html?extractOffers(html,url,city):[];success=!!html;
-   const observed=offers.length?offers.map(h=>location&&h.kind==='product'?{...h,city,address:location.address,point:location.point,phone:location.phone,locationSource:location.source,locationEvidence:'confirmed-point' as const,description:(h.description?`${h.description} `:'')+'Адрес продавца подтверждён; наличие этого товара в точке уточняйте.'}:{...h,city,locationEvidence:'regional-catalog' as const}):[pageHit(url,'Каталог продавца — уточнить цену',city)];
-   await cacheWrite(key,observed,offers.length?1800000:120000);return observed;
+  try{const html=await fetchSource(url);const offers=html?await enrichOffers(extractOffers(html,url,city)):[];success=!!html;if(!html)return {hits:[] as SearchHit[],available:false,location};
+   const places=businessLocations(html,url,city);await locatePublishedBusinesses(places,city);
+   const knownLocation=catalogLocationForUrl(url)||location;
+   const observed=offers.length?offers.map(h=>knownLocation&&knownLocation.complete!==false&&h.kind==='product'?{...h,city,address:knownLocation.address,point:knownLocation.point,phone:knownLocation.phone||h.phone,locationSource:knownLocation.pointSource||knownLocation.source,locationEvidence:'confirmed-point' as const,description:(h.description?`${h.description} `:'')+'Точка продавца подтверждена; наличие этого товара в филиале отдельно не подтверждено.'}:{...h,city,locationEvidence:h.point&&h.address?'confirmed-point' as const:'regional-catalog' as const}): [pageHit(url,'Каталог продавца — уточнить цену',city)];
+   const combined=[...observed,...places];await cacheWrite(key,attachCatalogLocations(combined),offers.length?1800000:120000);return {hits:combined,available:true,location};
   }finally{await releaseProvider(lock,1500);await recordFreeCall('seller-catalog',performance.now()-start,success?'complete':'unavailable');}
  }));
- return relevantOffers(batches.flat(),query,city);
+ return {hits:relevantOffers(attachCatalogLocations(batches.flatMap(batch=>batch.hits),near),query,city),status:batches.some(b=>b.available)?'seller-catalogs':'unavailable'};
 }
+
+export async function catalogOffers(query:string,city:string,near?:{lat:number;lng:number}){return (await searchCatalogs(query,city,near)).hits;}

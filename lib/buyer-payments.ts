@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from '@/lib/server-env';
 import {db} from '@/db';
 import {buyerConfig} from './buyer-config';
 type Payment={id:string;status:string;paid:boolean;test:boolean;amount:{value:string;currency:string};recipient:{account_id:string};metadata?:{order_id?:string};confirmation?:{confirmation_url?:string}};

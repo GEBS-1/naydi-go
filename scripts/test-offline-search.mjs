@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {chromium,expect} from '@playwright/test';
+import {mkdir,writeFile} from 'node:fs/promises';
+
+const base=process.argv[2]||'http://localhost:3001';
+if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw Error('Local test only');
+async function bundled(entry){const r=await build({entryPoints:[entry],bundle:true,write:false,platform:'node',format:'esm',target:'node22'});return import('data:text/javascript;base64,'+Buffer.from(r.outputFiles[0].text).toString('base64'));}
+const {parseIntent,deduplicate}=await bundled('lib/city-search.ts');
+assert.equal(parseIntent('набор гаечных ключей','Казань').category,'Инструменты');
+assert.equal(parseIntent('автомобильная краска бронзового цвета','Казань').category,'Автотовары');
+assert.ok(!parseIntent('автомобильная краска бронзового цвета','Казань').selectors.some(x=>x.includes('florist')));
+assert.equal(parseIntent('изготовление ключей','Казань').kind,'service');
+const {matchSellerLocations}=await bundled('lib/merchant-match.ts');
+const common={description:'',category:'Инструменты',city:'Казань',phone:null,hours:null,price:null,image:null,checkedAt:'',distanceKm:null};
+const store={...common,id:'store-near',kind:'store',title:'Магазин инструментов',address:'ул. Тестовая, 1',point:{lat:55.8,lng:49.1},site:'https://seller.example',source:'https://seller.example/contacts',status:'organization',locationEvidence:'confirmed-point'};
+const online={...common,id:'product-online',kind:'product',title:'Набор гаечных ключей',price:890,site:'https://seller.example/product/keys',source:'https://seller.example/product/keys',address:null,point:null,status:'website',locationEvidence:'unverified'};
+assert.equal(deduplicate([{...store,point:null,locationEvidence:undefined},store]).length,1);
+assert.equal(deduplicate([{...store,point:null,locationEvidence:undefined},store])[0].locationEvidence,'confirmed-point');
+const far={...store,id:'far',address:'ул. Другая, 2',point:{lat:55.9,lng:49.2}};
+assert.equal(matchSellerLocations([online],[far,store])[0].point,null);
+const located=matchSellerLocations([online],[far,store],{lat:55.8001,lng:49.1001})[0];
+assert.deepEqual(located.point,store.point);
+assert.equal(located.status,'website');
+assert.equal(located.sellerLocations.length,2);
+assert.deepEqual(matchSellerLocations([located],[],far.point)[0].point,far.point);
+assert.equal(matchSellerLocations([{...online,city:'Самара'}],[store],{lat:55.8,lng:49.1})[0].point,null);
+const {businessLocations,exactAddressMatch}=await bundled('lib/local-business.ts');
+const markup='<script type="application/ld+json">'+JSON.stringify({'@type':'HardwareStore',name:'Инструменты',address:{streetAddress:'улица Тестовая, 12',addressLocality:'Казань'},geo:{latitude:55.8,longitude:49.1}})+'</script>';
+assert.equal(businessLocations(markup,'https://seller.example/contacts','Казань').length,1);
+assert.equal(businessLocations(markup,'https://seller.example/contacts','Самара').length,0);
+const contact='<title>Автокраски</title><p>г. Казань, ул. Родина, д.2а Корпус 5</p>';
+assert.equal(businessLocations(contact,'https://seller.example','Казань')[0].address,'ул. Родина, д.2а Корпус 5');
+assert.equal(businessLocations(contact,'https://seller.example','Самара').length,0);
+assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Тестовая, 12'},'Казань','ул. Тестовая, 12'),true);
+assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Тестовая, 120'},'Казань','ул. Тестовая, 12'),false);
+assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Николая Ершова 62Д к2'},'Казань','ул. Николая Ершова, 62Д, корп. 2'),true);
+assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Николая Ершова 62Д к1'},'Казань','ул. Николая Ершова, 62Д, корп. 2'),false);
+assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица 1905 года 30'},'Казань','улица 1905 года, 20'),false);
+const {resolveSearch}=await bundled('lib/search-context.ts');
+assert.equal(resolveSearch('покажи автомобильную краску',{query:'набор гаечных ключей',maxPrice:1000}).query,'покажи автомобильную краску');
+assert.equal(resolveSearch('дешевле',{query:'набор гаечных ключей'}).query,'набор гаечных ключей');
+
+await import('./test-nearby-focus.mjs');

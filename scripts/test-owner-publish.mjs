@@ -19,15 +19,15 @@ try{
  database.prepare('INSERT INTO owner_invites(hash,store_id,email,expires_at) VALUES(?,?,?,?)').run(hash,id,email,new Date(Date.now()+600000).toISOString());
  const invite=await call('/api/invite/'+token,{}),cookie=invite.r.headers.get('set-cookie').split(';')[0];
  owner=database.prepare('SELECT owner FROM shops WHERE id=?').get(id).owner;assert(owner);pass('One-time invitation creates real server owner session');
- const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
- const upload=await fetch(origin+'/api/catalog',{method:'PUT',headers:{Origin:origin,Cookie:cookie,'Content-Type':'image/png'},body:png});const uploaded=await upload.json();assert.equal(upload.status,200,JSON.stringify(uploaded));photo=uploaded.url;
- assert.equal((await fetch(origin+photo)).status,404);assert.equal((await fetch(origin+photo,{headers:{Cookie:cookie}})).status,200);pass('Uploaded R2 image is private before publication');
- const data={storeId:id,name:id+' наушники',category:'Электроника',brand:'QA',model:'fixture',description:'Только локальный тест, не предложение продавца',features:'',price:950,quantity:3,sku:id,published:false,photos:[photo],keywords:id+' ключи',stockConfirmed:true};
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64');
+  const upload=await fetch(origin+'/api/catalog',{method:'PUT',headers:{Origin:origin,Cookie:cookie,'Content-Type':'image/png'},body:png});const uploaded=await upload.json();assert.equal(upload.status,200,JSON.stringify(uploaded));photo=uploaded.url;
+  assert.equal((await fetch(origin+photo)).status,404);assert.equal((await fetch(origin+photo,{headers:{Cookie:cookie}})).status,200);pass('Uploaded R2 image is private before publication');
+  const data={storeId:id,name:id+' наушники',category:'Электроника',brand:'QA',model:'fixture',description:'Только локальный тест, не предложение продавца',features:'',price:950,priceConfirmed:true,quantity:3,sku:id,published:false,photos:[photo],keywords:id+' ключи',stockConfirmed:true};
  product=(await call('/api/catalog',{action:'product',data},cookie)).b.id;
  assert(!(await call('/api/catalog')).b.products.some(p=>p.id===product));pass('Owner creates draft; anonymous catalog excludes it');
  await call('/api/catalog',{action:'product',id:product,data:{...data,published:true}},cookie);
  let found=(await call('/api/catalog',{action:'search',query:id})).b.products.find(p=>p.id===product);assert.equal(found.price,950);assert.equal(found.quantity,3);
- assert.equal((await fetch(origin+photo)).status,200);pass('Publication exposes product and its image to anonymous catalog search');
+  assert.equal((await fetch(origin+photo)).status,200);pass('Publication exposes product and its image to anonymous catalog search');
  // Ambiguous keyword skips paid sources but still exercises the unified public index.
  const unified=await fetch(origin+'/api/search',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify({query:'ключи',city:'Казань'})});
  assert.equal(unified.status,200);const phases=(await unified.text()).trim().split('\n').map(JSON.parse),hit=phases.at(-1).hits.find(h=>h.id===product);assert(hit);assert.equal(hit.price,950);assert.equal(hit.point,null);pass('Unified search sees published owner product; unconfirmed address gets no marker');

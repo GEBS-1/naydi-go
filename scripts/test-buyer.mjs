@@ -2,18 +2,19 @@
 import assert from 'node:assert/strict';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {createHash,randomBytes} from 'node:crypto';
+import {createHash,createHmac,randomBytes} from 'node:crypto';
 import {build} from 'esbuild';
 import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 mkdirSync('artifacts/buyer',{recursive:true});
 const sqlite=new DatabaseSync(':memory:');sqlite.exec(readFileSync('drizzle/0006_buyer_access.sql','utf8'));sqlite.exec(readFileSync('drizzle/0007_bot_news.sql','utf8'));sqlite.exec(readFileSync('drizzle/0008_buyer_personal.sql','utf8'));
+sqlite.exec(readFileSync('drizzle/0013_messenger_identities.sql','utf8'));sqlite.exec(readFileSync('drizzle/0016_buyer_contact_phones.sql','utf8'));
 const wrap=(sql,args=[])=>({bind:(...a)=>wrap(sql,a),first:()=>sqlite.prepare(sql).get(...args)||null,all:()=>({results:sqlite.prepare(sql).all(...args)}),run:()=>({meta:{changes:sqlite.prepare(sql).run(...args).changes}})});
 globalThis.testBuyerDB={prepare:wrap,batch:stmts=>{sqlite.exec('BEGIN IMMEDIATE');try{const r=stmts.map(s=>s.run());sqlite.exec('COMMIT');return r;}catch(e){sqlite.exec('ROLLBACK');throw e;}}};
 globalThis.testBuyerEnv={BUYER_AUTH_ENABLED:'1',BUYER_QUOTA_ENABLED:'1',AUTH_BASE_URL:'https://naydigo.prepromo.ru',TELEGRAM_BOT_TOKEN:'fixture',TELEGRAM_BOT_USERNAME:'FixtureBot',TELEGRAM_WEBHOOK_SECRET:'fixture-secret',YOOKASSA_ENABLED:'1',YOOKASSA_TEST_MODE:'1',YOOKASSA_SECRET_KEY:'test_fixture',YOOKASSA_SHOP_ID:'fixture-shop'};
 globalThis.testHash=async v=>createHash('sha256').update(v).digest('hex');globalThis.testToken=()=>randomBytes(32).toString('hex');
 const stubs={
- 'cloudflare:workers':'export const env=globalThis.testBuyerEnv;',
+ '@/lib/server-env':'export const env=globalThis.testBuyerEnv;',
  '@/db':'export const db=()=>globalThis.testBuyerDB;',
  './onboarding':`export const hash=globalThis.testHash,token=globalThis.testToken;export const requestOrigin=req=>new URL(req.url).origin;export function sameOrigin(req){if(req.headers.get('origin')!==requestOrigin(req))throw Error('Origin');}`,
  './discovery-server':`export const quota=async()=>{};export const guest=async req=>({key:'guest-fixture',cookie:null});`
@@ -28,15 +29,34 @@ globalThis.fetch=async(_url,init)=>{delivered=JSON.parse(init.body).text;return 
 const event={message:{chat:{type:'private',id:123},from:{id:123,first_name:'Fixture'},text:'/start '+challenge}};
 assert.equal((await api.buyerBotWebhook(req('',event),'telegram')).status,403);pass('Reject forged webhook');
 assert.equal((await api.buyerBotWebhook(req('',event,{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram')).status,200);
-assert.match(delivered,/Подтвердить/);
+assert.match(delivered,/подтвердите/i);
 assert.equal((await api.pollBuyerLogin(req(browser))).authenticated,false);
 const callback={callback_query:{id:'fixture-callback',from:{id:123,first_name:'Fixture'},message:{chat:{type:'private',id:123}},data:challenge}};
+let returnButton;
+globalThis.fetch=async(_url,init)=>{const body=JSON.parse(init.body);if(body.reply_markup){assert.equal(body.reply_markup.inline_keyboard.flat().length,1);returnButton=body.reply_markup.inline_keyboard[0][0];}return Response.json({ok:true});};
 await api.buyerBotWebhook(req('',callback,{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');
+assert.equal(returnButton.text,'Вернуться в НайдиGO');
+const [returnChallenge,returnSecret]=new URLSearchParams(new URL(returnButton.url).hash.slice(1)).get('login').split('.');
+await assert.rejects(api.returnBuyerLogin(req(),returnChallenge,returnSecret),/браузере/);
+await assert.rejects(api.returnBuyerLogin(req(browser),returnChallenge,'a'.repeat(64)),/устарела/);
+
 assert.equal((await api.pollBuyerLogin(req('ng_login='+'a'.repeat(64)))).authenticated,false);
-const cookie=(await api.pollBuyerLogin(req(browser))).cookie.split(';')[0];
+const cookie=(await api.returnBuyerLogin(req(browser),returnChallenge,returnSecret)).cookie.split(';')[0];
+assert.equal((await api.returnBuyerLogin(req(cookie),returnChallenge,returnSecret)).authenticated,true);
+await assert.rejects(api.returnBuyerLogin(req(browser),returnChallenge,returnSecret),/уже завершён/);
+globalThis.fetch=async(_url,init)=>{delivered=JSON.parse(init.body).text;return Response.json({ok:true});};
 assert.equal((await api.pollBuyerLogin(req(browser))).authenticated,false);
 assert.equal((await api.buyerIdentity(req(cookie))).id,'telegram:123');pass('Explicit confirmation, browser binding, one-time login and server session');
 await api.buyerBotWebhook(req('',{message:{...event.message,text:'/start'}},{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');assert.match(delivered,/Добро пожаловать/);pass('Plain Start responds with website link');
+let botBody;
+globalThis.fetch=async(_url,init)=>{botBody=JSON.parse(init.body);delivered=botBody.text||'';return Response.json({ok:true});};
+await api.buyerBotWebhook(req('',{message:{...event.message,text:'/start'}},{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');
+assert.ok(botBody.reply_markup.inline_keyboard.flat().some(b=>b.url===base+'/sell'));
+assert.ok(botBody.reply_markup.inline_keyboard.flat().some(b=>b.callback_data==='help'));
+await api.buyerBotWebhook(req('',{callback_query:{...callback.callback_query,data:'help'}},{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');
+assert.match(delivered,/ту же вкладку/);assert.match(delivered,/проверку/);
+await api.buyerBotWebhook(req('',callback,{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');
+assert.match(delivered,/устарела/);pass('Bot welcome has seller/search/help actions, help callback replies, consumed login cannot report new success');
 const reservations=await Promise.allSettled(Array.from({length:12},()=>api.reserveBuyerSearch(req(cookie))));assert.equal(reservations.filter(r=>r.status==='fulfilled').length,10);assert.equal((await api.buyerBalance('telegram:123'))[0].remaining,0);pass('Exactly ten reservations under concurrency');
 const first=reservations[0].value;await api.settleBuyerSearch(first.id,false);await api.settleBuyerSearch(first.id,false);assert.equal((await api.buyerBalance('telegram:123'))[0].remaining,1);pass('Technical error refund is idempotent');
 const failed=await api.buyerOperation(req(cookie),async()=>new Response('{"error":"fixture"}\n',{headers:{'Content-Type':'application/x-ndjson'}}));await failed.text();assert.equal((await api.buyerBalance('telegram:123'))[0].remaining,1);pass('Streamed error returns credit');
@@ -52,6 +72,12 @@ sqlite.prepare("UPDATE buyer_grants SET expires_at=1 WHERE kind='pro'").run();aw
 await api.logoutBuyer(req(cookie));assert.equal(await api.buyerIdentity(req(cookie)),null);pass('Logout revokes session');
 globalThis.testBuyerEnv.MAX_AUTH_ENABLED='1';globalThis.testBuyerEnv.MAX_BOT_TOKEN='fixture';globalThis.testBuyerEnv.MAX_BOT_URL='https://max.ru/fixture_bot';globalThis.testBuyerEnv.MAX_WEBHOOK_SECRET='max-secret';
 globalThis.fetch=async()=>Response.json({success:true});
+let maxMenu;
+globalThis.fetch=async(_url,init)=>{const b=JSON.parse(init.body);if(b.text)maxMenu=b;return Response.json({success:true});};
+await api.buyerBotWebhook(req('',{update_type:'bot_started',user:{user_id:456,name:'MAX Fixture'}},{'x-max-bot-api-secret':'max-secret'}),'max');
+assert.match(maxMenu.text,/Добро пожаловать/);assert.ok(maxMenu.attachments[0].payload.buttons.flat().some(b=>b.url===base+'/sell'));
+await api.buyerBotWebhook(req('',{update_type:'message_callback',callback:{callback_id:'help-fixture',user:{user_id:456},payload:'help'}},{'x-max-bot-api-secret':'max-secret'}),'max');
+assert.match(maxMenu.text,/Как разместить товар/);pass('MAX Start and help return onboarding and seller link');
 const maxLogin=await api.startBuyerLogin(req(),'max'),maxChallenge=new URL(maxLogin.url).searchParams.get('start'),maxBrowser=maxLogin.cookie.split(';')[0];
 const maxEvent={update_type:'bot_started',user:{user_id:456,name:'MAX Fixture'},payload:maxChallenge};
 assert.equal((await api.buyerBotWebhook(req('',maxEvent,{'x-max-bot-api-secret':'max-secret'}),'max')).status,200);
@@ -76,4 +102,35 @@ globalThis.testBuyerEnv.EMAIL_AUTH_ENABLED='1';globalThis.testBuyerEnv.EMAIL_FRO
 let emailPayload;globalThis.fetch=async(url,init)=>{assert.equal(String(url),'https://api.resend.com/emails');assert.equal(init.headers.Authorization,'Bearer fixture-resend');emailPayload=JSON.parse(init.body);return Response.json({id:'fixture-email'});};
 await api.startEmailLogin(req(),'User@Example.COM');assert.deepEqual(emailPayload.to,['user@example.com']);const emailLink=emailPayload.text.match(/https:\/\/[^\s]+/)[0],emailToken=new URL(emailLink).searchParams.get('token');assert.notEqual(sqlite.prepare("SELECT hash FROM buyer_logins WHERE provider='email' ORDER BY rowid DESC LIMIT 1").get().hash,emailToken);
 const emailSession=(await api.finishEmailLogin(new Request(emailLink))).split(';')[0];assert.equal((await api.buyerIdentity(req(emailSession))).id,'email:user@example.com');await assert.rejects(api.finishEmailLogin(new Request(emailLink)));pass('Email magic link normalizes identity, stores only token hash, creates session and rejects replay (Resend fixture)');
+// Link a fresh MAX identity to an existing Telegram account with proof in both sessions.
+globalThis.fetch=async()=>Response.json({ok:true,success:true});
+const telegramToken='b'.repeat(64);sqlite.prepare('INSERT INTO buyer_sessions(hash,buyer_id,expires_at) VALUES(?,?,?)').run(await globalThis.testHash(telegramToken),'telegram:123',Date.now()+60000);
+const ownerCookie='ng_buyer='+telegramToken;
+await assert.rejects(api.startBuyerLogin(req(),'max',true));
+sqlite.prepare('UPDATE buyer_accounts SET name=? WHERE id=?').run('Своё имя','telegram:123');
+const linked=await api.startBuyerLogin(req(ownerCookie),'max',true),linkedCode=new URL(linked.url).searchParams.get('start'),linkedBrowser=linked.cookie.split(';')[0];
+async function confirmMax(challenge,subject){await api.buyerBotWebhook(req('',{update_type:'bot_started',user:{user_id:subject,name:'Linked'},payload:challenge},{'x-max-bot-api-secret':'max-secret'}),'max');await api.buyerBotWebhook(req('',{update_type:'message_callback',callback:{callback_id:'link',user:{user_id:subject},payload:challenge}},{'x-max-bot-api-secret':'max-secret'}),'max');}
+await confirmMax(linkedCode,789);
+await assert.rejects(api.pollBuyerLogin(req(linkedBrowser)));
+const linkedSession=(await api.pollBuyerLogin(req(ownerCookie+'; '+linkedBrowser))).cookie.split(';')[0];
+assert.equal((await api.buyerIdentity(req(linkedSession))).id,'telegram:123');assert.equal((await api.buyerIdentity(req(linkedSession))).provider,'max');
+const again=await api.startBuyerLogin(req(),'max');await confirmMax(new URL(again.url).searchParams.get('start'),789);const againCookie=(await api.pollBuyerLogin(req(again.cookie.split(';')[0]))).cookie.split(';')[0];assert.equal((await api.buyerIdentity(req(againCookie))).id,'telegram:123');assert.equal((await api.buyerIdentity(req(againCookie))).name,'Своё имя');
+const conflict=await api.startBuyerLogin(req(ownerCookie),'max',true);await confirmMax(new URL(conflict.url).searchParams.get('start'),456);await assert.rejects(api.pollBuyerLogin(req(ownerCookie+'; '+conflict.cookie.split(';')[0])),/другому аккаунту/);
+pass('Both messengers restore one account; remembered login provider; explicit linking and occupied-account protection');
+globalThis.fetch=async()=>Response.json({ok:true,success:true});
+const tgContact={message:{chat:{type:'private',id:123},from:{id:123,first_name:'Fixture'},contact:{user_id:456,phone_number:'+79000000000'}}};
+await api.buyerBotWebhook(req('',tgContact,{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');
+assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM buyer_contact_phones').get().n,0);
+tgContact.message.contact.user_id=123;
+await api.buyerBotWebhook(req('',tgContact,{'x-telegram-bot-api-secret-token':'fixture-secret'}),'telegram');
+assert.equal(sqlite.prepare('SELECT phone FROM buyer_contact_phones WHERE buyer_id=?').get('telegram:123').phone,'+79000000000');
+const vcf='BEGIN:VCARD\r\nVERSION:3.0\r\nTEL;TYPE=cell:79990000000\r\nEND:VCARD\r\n';
+const contactPayload={vcf_info:vcf,hash:'0'.repeat(64),max_info:{user_id:789}};
+const maxContact={update_type:'message_created',message:{sender:{user_id:789},recipient:{chat_type:'dialog'},body:{attachments:[{type:'contact',payload:contactPayload}]}}};
+await api.buyerBotWebhook(req('',maxContact,{'x-max-bot-api-secret':'max-secret'}),'max');
+assert.equal(sqlite.prepare('SELECT phone FROM buyer_contact_phones WHERE buyer_id=?').get('telegram:123').phone,'+79000000000');
+contactPayload.hash=createHmac('sha256','fixture').update(vcf).digest('hex');
+await api.buyerBotWebhook(req('',maxContact,{'x-max-bot-api-secret':'max-secret'}),'max');
+assert.equal(sqlite.prepare('SELECT phone FROM buyer_contact_phones WHERE buyer_id=?').get('telegram:123').phone,'+79990000000');
+pass('Telegram own contact and MAX signed contact only; linked identity saves phone into the same account');
 writeFileSync('artifacts/buyer/unit-report.json',JSON.stringify({fixture:true,passed},null,2));sqlite.close();

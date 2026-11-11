@@ -5,7 +5,7 @@ spec=importlib.util.spec_from_file_location('vps',pathlib.Path(__file__).with_na
 c=v.connect()
 try:
  v.run(c,"""python3 - <<'PY'
-import pathlib,json,urllib.request,urllib.error
+import pathlib,json,urllib.request,urllib.error,subprocess
 cfg={}
 for line in pathlib.Path('/var/www/naydi-data/runtime.env').read_text().splitlines():
  if '=' in line:
@@ -23,9 +23,12 @@ tg='https://api.telegram.org/bot'+cfg['TELEGRAM_BOT_TOKEN']+'/'
 me=call(tg+'getMe')['result'];assert me['username'].lower()==cfg['TELEGRAM_BOT_USERNAME'].lstrip('@').lower(),'Telegram bot identity mismatch'
 info=call(tg+'getWebhookInfo')['result'];target=base+'/api/buyer/bots/telegram'
 assert not info.get('url') or info['url']==target,'Existing Telegram webhook belongs to another application; unchanged'
-r=call(tg+'setWebhook',body={'url':target,'secret_token':cfg['TELEGRAM_WEBHOOK_SECRET'],'allowed_updates':['message','callback_query'],'drop_pending_updates':False})
-assert r.get('ok');print('TELEGRAM_WEBHOOK_OK')
-assert call(tg+'setMyCommands',body={'commands':[{'command':'start','description':'Вход в НайдиGo и переход на сайт'},{'command':'id','description':'Показать мой ID для уведомлений'},{'command':'subscribe','description':'Согласиться на новости и предложения (до 1 в день)'},{'command':'stop','description':'Отключить рассылку'}]}).get('ok')
+polling=subprocess.run(['pm2','describe','naydigo-telegram'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
+if polling:print('TELEGRAM_POLLING_RETAINED')
+else:
+ r=call(tg+'setWebhook',body={'url':target,'secret_token':cfg['TELEGRAM_WEBHOOK_SECRET'],'allowed_updates':['message','callback_query'],'drop_pending_updates':False})
+ assert r.get('ok');print('TELEGRAM_WEBHOOK_OK')
+assert call(tg+'setMyCommands',body={'commands':[{'command':'start','description':'Приветствие и основные действия'},{'command':'help','description':'Как войти и разместить товар'},{'command':'id','description':'Показать мой ID для уведомлений'},{'command':'subscribe','description':'Согласиться на новости и предложения (до 1 в день)'},{'command':'stop','description':'Отключить рассылку'}]}).get('ok')
 api=cfg.get('MAX_API_BASE_URL','https://platform-api2.max.ru');headers={'Authorization':cfg['MAX_BOT_TOKEN']};target=base+'/api/buyer/bots/max'
 me=call(api+'/me',headers);assert cfg['MAX_BOT_URL'].rstrip('/').endswith('/'+me['username']),'MAX bot identity mismatch'
 info=call(api+'/subscriptions',headers)
