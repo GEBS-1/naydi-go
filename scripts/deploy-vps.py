@@ -1,6 +1,6 @@
 """Deploy only NaydiGo, preserving data and all other VPS applications."""
 from pathlib import Path
-import importlib.util, datetime, tarfile, json, shlex, sys, re, os, secrets
+import importlib.util, datetime, tarfile, json, shlex, sys, re, os, secrets, subprocess
 sys.stdout.reconfigure(encoding='utf-8',errors='replace')
 sys.stderr.reconfigure(encoding='utf-8',errors='replace')
 
@@ -22,12 +22,13 @@ archive=local/'source.tar.gz'
 skip={'.git','node_modules','.wrangler','dist','out','.next','.vinext','artifacts','.sites-runtime','.agents','.codex','outputs','work','__pycache__'}
 if not resume:
  with tarfile.open(archive,'w:gz') as tar:
-  for directory,dirs,files in os.walk(ROOT):
-   dirs[:]=[d for d in dirs if d not in skip and not (Path(directory)/d).is_symlink()]
-   for name in files:
-    p=Path(directory)/name
-    if p.is_symlink() or (name.startswith('.env') and name!='.env.example') or name in ['.dev.vars','tsconfig.tsbuildinfo']:continue
-    tar.add(p,arcname=str(p.relative_to(ROOT)),recursive=False)
+  tracked=subprocess.check_output(['git','-c','safe.directory='+str(ROOT),'ls-files','-z'],cwd=ROOT).split(b'\0')
+  for name in tracked:
+   if not name:continue
+   relative=Path(os.fsdecode(name));p=ROOT/relative
+   if any(part in skip for part in relative.parts) or p.is_symlink() or not p.is_file():continue
+   if (p.name.startswith('.env') and p.name!='.env.example') or p.name in ['.dev.vars','tsconfig.tsbuildinfo']:continue
+   tar.add(p,arcname=relative.as_posix(),recursive=False)
 
 client=vps.connect();sftp=client.open_sftp()
 def run(command,timeout=900):
