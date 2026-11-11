@@ -1,5 +1,5 @@
 import {matchesMerchantSource} from './merchant-search-sources';
-import {pageHit} from './offer-extraction';
+import {extractOffers,pageHit} from './offer-extraction';
 import {env} from '@/lib/server-env';
 import {routerCall} from './router-gateway';
 import {cacheRead,cacheWrite} from './search-storage';
@@ -44,7 +44,7 @@ export async function searchWebPlaces(query:string,city:string,near?:GeoPoint,ar
  const matching=(hits:SearchHit[])=>forService
   ?hits.filter(hit=>hit.kind==='page'||matchesServicePlace(hit,intent)).map(hit=>hit.kind==='page'?hit:({...hit,kind:'service' as const,description:'Исполнитель найден на опубликованной странице. Стоимость и время записи уточните.'}))
   :hits;
- const key='offline-places:v4:'+normalize(city)+':'+(near?near.lat.toFixed(2)+','+near.lng.toFixed(2):'city')+':'+normalize(query)+':'+JSON.stringify(sellerSites||[]);
+ const key='offline-places:v5:'+normalize(city)+':'+(near?near.lat.toFixed(2)+','+near.lng.toFixed(2):'city')+':'+normalize(query)+':'+JSON.stringify(sellerSites||[]);
  const cached=await cacheRead<SearchHit[]>(key);if(cached){const relevant=matching(relevantOffers(cached,query,city));await locatePublishedBusinesses(relevant,city);return {hits:deduplicate(relevant,near),status:'cache'};}
  try{
   const answer=await routerCall({model:'perplexity/sonar',max_tokens:1000,temperature:0,
@@ -59,7 +59,10 @@ export async function searchWebPlaces(query:string,city:string,near?:GeoPoint,ar
   const hits=(await Promise.all([...unique].slice(0,4).map(async ([url,source])=>{
    const html=await fetchSource(url);
    const businesses=html?relevantOffers(businessLocations(html,url,city),query,city).slice(0,6):[];
-   const relevant=matching(businesses);
+   // A place citation can point directly at the seller's product page.
+   // Keep its observed offer instead of reducing it to a generic organization.
+   const offers=html&&!forService?relevantOffers(extractOffers(html,url,city),query,city).slice(0,3):[];
+   const relevant=matching([...offers,...businesses]);
    if(relevant.length||!forService)return relevant;
    const link=pageHit(url,source.title,city);
    const evidence=`${source.title} ${source.snippet||''}`;

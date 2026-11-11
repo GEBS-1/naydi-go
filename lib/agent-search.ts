@@ -24,6 +24,8 @@ import {routerCall} from './router-gateway';
 import {offerAvailabilityAdjustment,relevantOffers} from './offer-relevance';
 import {catalogAndWebParallel} from './catalog-first';
 import {persistDiscoveredOffers,readDiscoveredOffers} from './discovered-offers';
+import {extractOffers} from './offer-extraction';
+import {fetchSource} from './source-fetch';
 
 export type AgentSearchRequest={resume?:boolean;query:string;city:string;near?:GeoPoint;bounds?:Bounds;context?:SearchContext};
 export type AgentSearchResponse={
@@ -196,6 +198,16 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
   }));
   const organizations=await hidePrivate(relevantOffers([...osm.hits,...places.hits],intent.query,input.city)
     .filter(h=>intent.kind!=='service'||h.kind==='page'||matchesServicePlace(h,intent)));
+  // Older discovery entries can classify a direct seller product page as a
+  // store. Re-read at most two such pages and use only observed product facts.
+  if(intent.kind==='product'&&![...result.hits,...web.hits,...organizations].some(h=>h.kind==='product'&&h.price!==null&&h.address&&h.evidence==='source-page')){
+    const productPages=[...new Set([...organizations,...result.hits].filter(h=>h.kind==='store').map(h=>safeHTTP(h.site||h.source)).filter((url):url is string=>!!url&&/\/\d{3,}\/?$/u.test(new URL(url).pathname)))].slice(0,2);
+    const recovered=(await Promise.all(productPages.map(async url=>{
+      const html=await fetchSource(url);
+      return html?relevantOffers(extractOffers(html,url,input.city),intent.query,input.city):[];
+    }))).flat();
+    if(recovered.length)web.hits.push(...recovered);
+  }
   const knownLocations=[...organizations,...result.hits,...verifiedStoreLocations,...web.hits];
   const firstOffers=matchSellerLocations([...result.hits,...web.hits],knownLocations,input.near);
   const products=firstOffers.filter(h=>h.kind==='product'&&h.sourceAvailability!=='out_of_stock');
@@ -219,7 +231,7 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
     }
   }
 
-  const placeRecords=organizations.filter(h=>h.kind!=='page');
+  const placeRecords=organizations.filter(h=>h.kind==='store'||h.kind==='service');
   if(placeRecords.length){
     await db().batch(placeRecords.map(h=>db().prepare(
       'INSERT INTO external_places(id,city,category,data,checked_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET city=excluded.city,category=excluded.category,data=excluded.data,checked_at=excluded.checked_at'

@@ -23,12 +23,12 @@ export function relevantOffers(hits:SearchHit[],query:string,city:string){
  const size=query.match(/размер[а-я]*\s*[:№]?\s*(\d{2,3})(?!\d)|(?<!\d)(\d{2,3})(?:[-–](?:го|й|ый))?\s*размер/iu);
  const requestedSize=size?.[1]||size?.[2];
  const watts=[...query.matchAll(/(?<!\d)(\d+(?:[,.]\d+)?)\s*(?:вт|ватт(?:а|ов)?|w)(?![а-яёa-z])/giu)].map(m=>Number(m[1].replace(',','.')));
- const modelCodes=[...query.matchAll(/\b[a-z]{2,}(?:[- ]?)\d[a-z0-9–-]*\b/gi)].map(match=>normalize(match[0]));
+ const modelCodes=[...query.matchAll(/\b[a-z]{2,}(?:[- ]?)\d[a-z0-9–-]*\b/gi)].map(match=>match[0]).filter(code=>!/\s\d+$/u.test(code)).map(normalize);
  const clean=normalize(query.replace(/размер[а-я]*\s*[:№]?\s*\d{2,3}|\d{2,3}(?:[-–](?:го|й|ый))?\s*размер[а-я]*/giu,'').replace(/-?site:\S+/giu,'').replace(/(?:до|не дороже|бюджет)\s*\d[\d\s]*(?:[,.]\d+)?\s*(?:рублей|руб|₽)?/giu,''));
  const stop=new Set(['найди','найти','купить','хочу','нужно','нужен','нужна','нужны','покажи','где','для','мне','есть','рублей','руб','рядом','со','мной','по','дороге','пути','недорого','самовывоз','магазин','адрес','офлайн',...normalize(city).split(' ')]);
  const tokens=clean.split(' ').filter(t=>t.length>2&&!stop.has(t)&&!/^\d+$/.test(t));
  const stem=(s:string)=>s.length>5?s.slice(0,-2):s.length>3?s.slice(0,-1):s;
- const aliases=[['лампоч','ламп'],['корм','консерв'],['беспровод','bluetooth','tws','wireless'],['кош','кот'],['собак','щен'],['куртк','пуховик','анорак']];
+ const aliases=[['лампоч','ламп'],['корм','консерв'],['беспровод','bluetooth','tws','wireless'],['кош','кот'],['собак','щен'],['куртк','пуховик','анорак'],['зарядк','зарядн','блок питан','адаптер питан']];
  return hits.filter(h=>{
   if(h.kind!=='product'){
    if(h.kind!=='page'){

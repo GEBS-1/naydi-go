@@ -27,6 +27,7 @@ export function sellerOffers(html:string,source:string,city:string,checkedAt=new
  if(host==='koreavisage.ru'||host==='www.koreavisage.ru')return koreaVisageOffers(html,source,city,checkedAt);
  if(host==='fenixkz.ru'||host==='www.fenixkz.ru')return fenixOffers(html,source,city,checkedAt);
  if(host==='rybalka-rt.ru'||host==='www.rybalka-rt.ru')return rybalkaOffers(html,source,city,checkedAt);
+ if(host==='setup-service.ru'||host==='www.setup-service.ru')return setupOffers(html,source,city,checkedAt);
  if(!pet&&!['velosky.ru','kazan-mall.istudio-kazan.ru'].includes(host))return [];
  const container=pet?'product-thumb':host==='kazan-mall.istudio-kazan.ru'||host==='velosky.ru'?'item_block':'item_info';
  const productBlocks=sellerBlocks(html,container);
@@ -66,3 +67,19 @@ function maikorcosOffers(html:string,source:string,city:string,checkedAt:string)
 function koreaVisageOffers(html:string,source:string,city:string,checkedAt:string){return blocksFromStarts(html,/<div\b[^>]*class=["']widget["'][^>]*data-type=["']simple-image["'][^>]*>/gi,12).flatMap((block,index)=>{const paragraphs=[...block.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map(m=>text(m[1])).filter(Boolean),title=paragraphs.find(value=>!/^\d[\d\s]*\s*руб\.?$/iu.test(value))||'',priceText=paragraphs.find(value=>/^\d[\d\s]*\s*руб\.?$/iu.test(value))?.match(/[\d\s]+/)?.[0]||'',options=block.match(/<script\b[^>]*class=["']widget-options["'][^>]*>([\s\S]*?)<\/script>/i)?.[1]||'';let image='';try{const data=JSON.parse(options),base=String(data.storage||'').replace(/^\/\//,'https://');image=base+String(data.photoData?.name||'');}catch{}return title&&priceText?hit(source,city,checkedAt,{title,link:source+'#offer-'+index,image,price:observed(priceText),seller:'KOREA VISAGE',category:'Красота и здоровье'}):[];});}
 function fenixOffers(html:string,source:string,city:string,checkedAt:string){return blocksFromStarts(html,/<div\b[^>]*class=["'][^"']*\bproduct-item\b[^"']*\bshop2-product-item\b[^"']*["'][^>]*>/gi).flatMap(block=>{const link=block.match(/<p\b[^>]*class=["']product-name["'][^>]*>\s*<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i),priceText=block.match(/<div\b[^>]*class=["']product-price["'][^>]*>[\s\S]*?<span\b[^>]*>\s*([\d\s,.]+)\s*р\./iu)?.[1]||'',image=block.match(/<div\b[^>]*class=["']product-img["'][^>]*>[\s\S]*?<img\b[^>]*src=["']([^"']+)["']/i)?.[1]||'';return hit(source,city,checkedAt,{title:text(link?.[2]||''),link:link?.[1]||'',image,price:observed(priceText),seller:'Феникс-Про',category:'Дом и ремонт'});});}
 function rybalkaOffers(html:string,source:string,city:string,checkedAt:string){return blocksFromStarts(html,/<div\b[^>]*class=["'][^"']*\bcatalog-item\b[^"']*["'][^>]*>/gi).flatMap(block=>{const opening=block.match(/<div\b[^>]*>/i)?.[0]||'',link=block.match(/<div\b[^>]*class=["']image-default[^"']*["'][^>]*>\s*<a\b[^>]*href=["']([^"']+)["']/i)?.[1]||block.match(/<div\b[^>]*class=["']blk_name["'][^>]*>\s*<a\b[^>]*href=["']([^"']+)["']/i)?.[1]||'',imageTag=block.match(/<div\b[^>]*class=["']image-default[^"']*["'][^>]*>[\s\S]*?<img\b[^>]*>/i)?.[0]||'',image=attr(imageTag,'data-src')||attr(imageTag,'src');return hit(source,city,checkedAt,{title:attr(opening,'data-name'),link,image,price:observed(attr(opening,'data-price')),seller:'Рыбалка-РТ',category:'Зоотовары',availability:attr(opening,'data-stock')==='1'?'in_stock':'unknown'});});}
+function setupOffers(html:string,source:string,city:string,checkedAt:string):SearchHit[]{
+ if(!/^казань$/iu.test(city.trim())||!/^\/shop\/[^/]+\/group_\d+\/\d+\/?$/iu.test(new URL(source).pathname))return [];
+ const titles=[...html.matchAll(/<h1\b[^>]*class=["'][^"']*\bb1c_name\b[^"']*["'][^>]*>([\s\S]*?)<\/h1>/gi)];
+ const prices=[...html.matchAll(/<div\b[^>]*class=["'][^"']*\bprice\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)];
+ if(titles.length!==1||prices.length!==1)return [];
+ const title=text(titles[0][1]);
+ const priceText=text(prices[0][1]).match(/(?:^|\s)Цена\s*:\s*([\d\s,.]+)\s*(?:руб\.?|₽)/iu)?.[1]||'';
+ const gallery=html.match(/<div\b[^>]*id=["']gallery["'][^>]*>([\s\S]{0,2500})/i)?.[1]||'';
+ const photo=gallery.match(/<img\b[^>]*class=["'][^"']*\bimage\b[^"']*["'][^>]*>/i)?.[0]||'';
+ const image=attr(photo,'src');
+ const address=text(html.match(/<div\b[^>]*id=["']h_address["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]||'');
+ const visibleHtml=html.replace(/<!--[\s\S]*?-->/g,'');
+ const phone=text(visibleHtml.match(/<span\b[^>]*class=["'][^"']*\bbig_size\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1]||'').split(',')[0];
+ if(!title||!priceText)return [];
+ return hit(source,city,checkedAt,{title,link:source,image,price:observed(priceText),seller:'Сервисный центр Setup',category:'Электроника',address:address||undefined,phone:phone||undefined});
+}
