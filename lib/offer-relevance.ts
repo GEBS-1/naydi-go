@@ -36,6 +36,7 @@ export function relevantOffers(hits:SearchHit[],query:string,city:string){
     // A directory can contain dozens of businesses. Every one must still fit the purchase.
     if(/раскраск|книг|книжк/iu.test(query))return /раскраск|книг|книж|канц|игруш|детск|читай|букв|books|stationery|toys/u.test(text)&&!/автосервис|детейлинг|кузов|autoservice|pokrask/u.test(text);
     if(/гаечн|ключ.*(?:торцев|рожков|накидн)/iu.test(query)&&/изготовлен.*ключ|key_cutter|locksmith/u.test(text))return false;
+    if(/ноутбук|зарядк.*(?:lenovo|ноутбук)|(?:lenovo|ноутбук).*зарядк/iu.test(query)&&!/авто|машин/iu.test(query)&&/авто|магнитол|сигнализац/u.test(normalize(h.title)))return false;
     if(!/ремонт|покраск|мастерск|услуг|почин/iu.test(query)&&/автосервис|кузовн.*ремонт|ремонт.*вмятин|autoservice/u.test(text))return false;
     return true;
    }

@@ -16,6 +16,8 @@ assert.deepEqual(webSearchPayload('карандаш для бровей','Каз
 assert.deepEqual(webSearchPayload('дрель','Казань'),{query:'дрель',city:'Казань'},'coordinates are included only when the user granted a location');
 console.log('PASS: unified Perplexity request carries the selected query, city and permitted approximate location.');
 const {hasFreshOwnedStock,offerAvailabilityAdjustment,offerFreshness,relevantOffers}=await bundled('lib/offer-relevance.ts');
+const {parseIntent}=await bundled('lib/city-search.ts');
+assert.equal(parseIntent('лампа светодиодная E27 12 Вт','Казань').category,'Освещение');
 assert.ok(offerAvailabilityAdjustment({kind:'product',sourceAvailability:'in_stock'})>0);
 assert.ok(offerAvailabilityAdjustment({kind:'product',sourceAvailability:'out_of_stock'})<0);
 assert.equal(offerAvailabilityAdjustment({kind:'store',sourceAvailability:'in_stock'}),0);

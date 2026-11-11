@@ -2,17 +2,20 @@ import {chromium,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 const base=process.argv[2]||'http://127.0.0.1:3001';
 if(!['localhost','127.0.0.1'].includes(new URL(base).hostname))throw Error('Local only');
+const query=process.argv[3]||'детский велосипед 14 дюймов';
 const out='artifacts/search-acceptance-browser';await mkdir(out,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});const report=[];
 try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:900},geolocation:{latitude:55.829,longitude:49.131},permissions:['geolocation']});
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.addInitScript(()=>{localStorage.setItem('ng_city','Казань');localStorage.setItem('ng_analytics_consent_v1','no');});
- await page.goto(base);await expect(page.getByRole('button',{name:'Рядом с вами · Казань'})).toBeVisible();await page.waitForTimeout(300);await page.getByRole('textbox',{name:'Что хотите найти?'}).fill('детский велосипед 14 дюймов');await expect(page.getByRole('textbox',{name:'Что хотите найти?'})).toHaveValue('детский велосипед 14 дюймов');
+ await page.goto(base);await expect(page.getByRole('button',{name:'Рядом с вами · Казань'})).toBeVisible();await page.waitForTimeout(300);await page.getByRole('textbox',{name:'Что хотите найти?'}).fill(query);await expect(page.getByRole('textbox',{name:'Что хотите найти?'})).toHaveValue(query);
  const start=Date.now();await page.getByRole('button',{name:'Найти',exact:true}).click();
+ await expect(page.locator('.nearby-card').first()).toBeVisible({timeout:30000});
+ const firstCardMs=Date.now()-start;
  await page.waitForTimeout(3000);await page.screenshot({path:`${out}/after-click-${width}.png`,fullPage:true});console.log('SEARCH_CLICK',JSON.stringify({width,url:page.url(),errors,dialog:await page.getByRole('dialog').count()}));
  await expect(page.getByRole('heading',{name:'Где можно спросить'})).toBeVisible({timeout:30000});
- const firstCardMs=Date.now()-start,cards=await page.locator('.nearby-card').count();
+ const cards=await page.locator('.nearby-card').count();
  const route=page.locator('.nearby-card a.nearby-route').first();await expect(route).toHaveAttribute('href',/^https:\/\/yandex\.ru\/maps\//);
  await expect(page.locator('.nearby-card').getByRole('button',{name:'На карте'})).toHaveCount(0);
  await expect(page.locator('.nearby-result-count')).not.toContainText('Ищем рядом…',{timeout:30000});
@@ -21,7 +24,7 @@ try{for(const width of [390,1440]){
  await expect(page.locator('svg[aria-label="Интерактивная карта магазинов"]')).toBeVisible();
  const markers=await page.getByRole('button',{name:/^Показать /}).count();
  await page.screenshot({path:`${out}/map-${width}.png`,fullPage:true});
- report.push({width,query:'детский велосипед 14 дюймов',city:'Казань',point:{lat:55.829,lng:49.131},firstCardMs,cards,markers,route:await route.getAttribute('href'),pageErrors:errors});
+ report.push({width,query,city:'Казань',point:{lat:55.829,lng:49.131},firstCardMs,cards,markers,route:await route.getAttribute('href'),pageErrors:errors});
  await context.close();
 }}finally{await browser.close();await writeFile(`${out}/report.json`,JSON.stringify(report,null,2));}
 console.log('PASS',JSON.stringify(report));

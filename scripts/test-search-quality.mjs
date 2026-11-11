@@ -27,4 +27,8 @@ const lamps=[
  {kind:'product',title:'Лампа светодиодная E27 20 Вт',description:'Белый свет',source:'https://seller.ru/20'},
 ];
 assert.deepEqual(relevantOffers(lamps,'лампа светодиодная E27 12 Вт','Казань').map(h=>h.title),['Лампа светодиодная E27 12 Вт']);
+assert.deepEqual(relevantOffers([
+ {kind:'store',title:'Автоцифра',category:'Электроника',description:'Магазин подходящей категории',source:'https://www.openstreetmap.org/node/1'},
+ {kind:'store',title:'М.Видео',category:'Электроника',description:'Магазин подходящей категории',source:'https://www.openstreetmap.org/node/2'},
+],'зарядка для ноутбука Lenovo 65 Вт','Казань').map(h=>h.title),['М.Видео']);
 console.log('PASS: unrelated items, foreign storefronts and informational articles are excluded; automotive tool search does not return spark plugs.');

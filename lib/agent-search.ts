@@ -132,11 +132,14 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
   const local=localDiscovery(index.products,index.shops,intent.query,input.city,input.near);
   const hits:SearchHit[]=[...discoveredCache,...(intent.kind==='service'?[]:catalogLocationHits(intent.query,input.city)),...local.offers.map(o=>({id:'owned:'+o.id,kind:o.kind,title:o.product.name,description:o.product.description,category:o.product.category,city:o.shop.city,address:o.shop.street||null,point:onMap(o.shop)?{lat:o.shop.lat,lng:o.shop.lng}:null,phone:o.shop.phone||null,site:o.shop.site||null,hours:o.shop.hours||null,source:o.source,checkedAt:o.checkedAt||'',price:o.product.price,image:o.product.photos[0]||null,status:'seller-confirmed' as const,distanceKm:o.distanceKm,product:o.product,shop:o.shop,locationEvidence:onMap(o.shop)?'confirmed-point' as const:'unverified' as const,sourceAvailability:o.confirmed?(o.product.quantity!>0?'in_stock' as const:'out_of_stock' as const):'unknown' as const}))];
   if(intent.query){
+    // A mapped organization remains a useful route fallback while live OSM is
+    // unavailable. Its cached category never proves that this item is in stock.
     const rows=await db().prepare('SELECT data,category FROM external_places WHERE city=? AND checked_at>? LIMIT 1500')
-      .bind(normalize(input.city),Date.now()-7*86400000).all<{data:string;category:string}>();
+      .bind(normalize(input.city),Date.now()-45*86400000).all<{data:string;category:string}>();
     for(const r of rows.results){
       const h=JSON.parse(r.data) as SearchHit;
       if(h.id.startsWith('osm:')&&h.point&&h.address&&!h.locationEvidence)h.locationEvidence='confirmed-point';
+      if(intent.category==='Освещение'&&!/свет|ламп|электр|хоз|строй|инструм|оборуд/iu.test(`${h.title} ${h.category}`))continue;
       const tags=intent.selectors.flatMap(s=>s.match(/="([^"]+)"/u)?.[1]||[]);
       const related=!!intent.category&&normalize(r.category)===normalize(intent.category)||tags.includes(h.category)||normalize(h.title).includes(normalize(intent.query));
       if(cityKey(h.city)===cityKey(input.city)&&related)hits.push(h);

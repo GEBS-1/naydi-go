@@ -48,6 +48,7 @@ const taxonomy:[RegExp,string,string[]][]=[
  [/ручк[аиу]?\s+шариков|шариков[а-яё]*\s+ручк|карандаш|тетрад|канцтовар/iu,'Канцтовары',['["shop"="stationery"]']],
  [/чайник|утюг|пылесос|кофевар/iu,'Бытовая техника',['["shop"="electronics"]','["shop"="houseware"]']],
  [/настольн.*ламп|ламп.*(?:чтени|стол)|светильник/iu,'Освещение',['["shop"="lighting"]','["shop"="houseware"]','["shop"="doityourself"]']],
+ [/ламп|светодиодн.*(?:e27|e14)/iu,'Освещение',['["shop"="lighting"]','["shop"="electrical"]','["shop"="doityourself"]']],
  [/ванн|сантех|ремонт|строймат|лампоч|инструмент|перфорат|дрел|шурупов[её]рт|креп[её]ж/iu,'Дом и ремонт',['["shop"="doityourself"]','["shop"="hardware"]','["shop"="bathroom_furnishing"]','["shop"="trade"]']],
  [/спорт|велосипед|мяч|хобби/iu,'Спорт и хобби',['["shop"="sports"]','["shop"="bicycle"]']],
  [/электрон|ноутбук|телефон|наушник/iu,'Электроника',['["shop"="electronics"]','["shop"="computer"]','["shop"="mobile_phone"]']],
