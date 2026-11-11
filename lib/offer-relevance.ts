@@ -22,6 +22,7 @@ export function relevantOffers(hits:SearchHit[],query:string,city:string){
  const broad=/подар|посовет|подобрать|вс[её] для|(?:корейск|азиатск).*космет|^\s*(?:дом и ремонт|автотовары|авто|автозапчасти|спорт и хобби|электроника|сад и дача|зоотовары|красота и здоровье|косметика|продукты|креп[её]ж|метизы|инструменты)\s*$/iu.test(query);
  const size=query.match(/размер[а-я]*\s*[:№]?\s*(\d{2,3})(?!\d)|(?<!\d)(\d{2,3})(?:[-–](?:го|й|ый))?\s*размер/iu);
  const requestedSize=size?.[1]||size?.[2];
+ const watts=[...query.matchAll(/(?<!\d)(\d+(?:[,.]\d+)?)\s*(?:вт|ватт(?:а|ов)?|w)(?![а-яёa-z])/giu)].map(m=>Number(m[1].replace(',','.')));
  const modelCodes=[...query.matchAll(/\b[a-z]{2,}(?:[- ]?)\d[a-z0-9–-]*\b/gi)].map(match=>normalize(match[0]));
  const clean=normalize(query.replace(/размер[а-я]*\s*[:№]?\s*\d{2,3}|\d{2,3}(?:[-–](?:го|й|ый))?\s*размер[а-я]*/giu,'').replace(/-?site:\S+/giu,'').replace(/(?:до|не дороже|бюджет)\s*\d[\d\s]*(?:[,.]\d+)?\s*(?:рублей|руб|₽)?/giu,''));
  const stop=new Set(['найди','найти','купить','хочу','нужно','нужен','нужна','нужны','покажи','где','для','мне','есть','рублей','руб','рядом','со','мной','по','дороге','пути','недорого','самовывоз','магазин','адрес','офлайн',...normalize(city).split(' ')]);
@@ -53,6 +54,12 @@ export function relevantOffers(hits:SearchHit[],query:string,city:string){
   }
   const attributes=h.characteristics||h.product?.attributes||[];
   const productText=`${h.title} ${h.description} ${h.model||h.product?.model||''} ${attributes.map(a=>a.name+' '+a.value).join(' ')}`;
+  if(watts.length){
+   // Reject a different stated wattage in the product name; a description may
+   // mention compatibility with several devices and is not product identity.
+   const named=[...h.title.matchAll(/(?<!\d)(\d+(?:[,.]\d+)?)\s*(?:вт|ватт(?:а|ов)?|w)(?![а-яёa-z])/giu)].map(m=>Number(m[1].replace(',','.')));
+   if(named.length&&!watts.some(watt=>named.includes(watt)))return false;
+  }
   if(modelCodes.some(code=>!(' '+normalize(productText)+' ').includes(' '+code+' ')))return false;
   if(requestedSize){
    const sizeValues=attributes.filter(a=>/размер|^size$/iu.test(a.name)).map(a=>a.value);

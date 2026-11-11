@@ -33,7 +33,8 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
   }catch(e){setError((e as Error).message);}finally{setLoading(false);}
  }
  const phone=details?.phone?.split(';')[0].trim(),phoneHref=phone?'tel:'+phone.replace(/[^+\d]/g,''):'';
- const website=safeHTTP(details?.site)||safeHTTP(details?.source),source=safeHTTP(details?.source);
+ const source=safeHTTP(details?.source),site=safeHTTP(details?.site);
+ const website=h.kind==='product'?source||site:site||source;
  return <article id={'search-hit-'+h.id} tabIndex={-1} data-selected={selected||undefined} onClick={onSelect} onFocus={onSelect} className={'search-hit nearby-card'+(h.kind==='product'?' nearby-product':'')+(h.product&&h.shop&&h.status==='seller-confirmed'?' nearby-listing':'')}>
   <ResultImage key={image||h.source} src={image} title={h.title}/>
   <div className="nearby-card-body">
@@ -56,8 +57,8 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
     {details.description?<p className="nearby-description">{details.description}</p>:h.kind==='product'&&<p>Описание товара не опубликовано в источнике.</p>}
     {details.hours&&<p>{details.hours}</p>}
     {phoneHref&&<a href={phoneHref} onClick={()=>trackProductEvent('phone_click',h.city)}><Phone size={14}/>{phone}</a>}
-    {website&&<a href={website} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('seller_click',h.city)}><ExternalLink size={14}/>Сайт продавца</a>}
-    {source&&source!==website&&<a href={source} target="_blank" rel="noreferrer">Источник</a>}
+    {website&&<a href={website} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('seller_click',h.city)}><ExternalLink size={14}/>{h.kind==='product'?'Товар у продавца':'Сайт продавца'}</a>}
+    {site&&site!==website&&<a href={site} target="_blank" rel="noreferrer">Сайт магазина</a>}
     {h.checkedAt&&Number.isFinite(Date.parse(h.checkedAt))&&<p>Данные от {new Date(h.checkedAt).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>}
     {!phoneHref&&!website&&<p>Контакты пока не опубликованы.</p>}
    </div>}
