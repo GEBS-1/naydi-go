@@ -1,0 +1,7 @@
+@media(min-width:1050px){
+ .listing-editor.unified-seller{max-width:1240px}
+ .listing-editor.unified-seller>.business-step{max-width:1100px;margin-left:auto;margin-right:auto;padding:28px 32px}
+ .listing-editor .unified-form-fields{position:relative;min-height:650px;padding-right:330px}
+ .listing-editor .unified-form-fields>.listing-assistant{position:absolute;top:54px;right:0;width:300px;max-height:650px;overflow:auto;margin:0;background:linear-gradient(160deg,#f9fbff,#f1efff);box-shadow:0 9px 24px #2a4b7b13}
+ .listing-editor .listing-form .unified-form-fields>label,.listing-editor .listing-form .unified-form-fields>.unified-field-pair,.listing-editor .listing-form .unified-form-fields>.unified-photo-picker{min-width:0}
+}

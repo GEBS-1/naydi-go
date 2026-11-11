@@ -8,6 +8,7 @@ import ListingAssistant from './listing-assistant';
 import SellerStats from './seller-stats';
 import PhoneImport from './phone-import';
 import SellerLocation from './seller-location';
+import './reference-listing.css';
 function emptyDraft(shop:Shop|null,accountName:string):ListingDraft{return {id:crypto.randomUUID(),sellerName:savedSellerName(shop,accountName),sellerType:shop?.sellerType||(shop?'business':'private'),companyName:shop&&shop.sellerType!=='private'?shop.name:'',name:'',description:'',category:'Личные вещи',condition:'',price:'',priceMode:'fixed',photos:[],city:shop?.city||'',street:shop?.street||'',phone:shop?.phone||'',point:shop&&Number.isFinite(shop.lat)&&Number.isFinite(shop.lng)?{label:shop.street,city:shop.city,lat:shop.lat,lng:shop.lng}:null};}
 function savedSellerName(shop:Shop|null,accountName:string){
  return (shop?.sellerName||(shop?.sellerType==='private'?shop.name:'')||accountName).trim().slice(0,100);

@@ -22,6 +22,8 @@
     "test:ingestion": "node scripts/test-ingestion.mjs",
     "test:analytics": "node scripts/test-launch-analytics.mjs",
     "test:buyer": "node scripts/test-buyer.mjs",
+    "test:personal-sync": "node scripts/test-personal-sync.mjs",
+    "test:personal-api": "node scripts/test-personal-api.mjs",
     "check:persistence": "node scripts/check-local-persistence.mjs",
     "typecheck": "tsc --noEmit",
     "test:nearby": "node scripts/test-nearby-focus.mjs",

@@ -31,6 +31,14 @@ export function matchesServicePlace(hit:SearchHit,intent:Intent){
  return rule?rule[0].test(text):normalize(text).includes(normalize(intent.query));
 }
 
+/** An OSM shop is a possible category seller only when its actual tag matches
+ * the taxonomy selected for the query. Neither tag nor name proves stock. */
+export function matchesProductPlace(hit:Pick<SearchHit,'id'|'category'>,intent:Intent){
+ if(!hit.id?.startsWith('osm:')||intent.kind!=='product'||!intent.selectors.length)return true;
+ const allowed=intent.selectors.flatMap(selector=>selector.match(/^\["[^"]+"="([^"]+)"\]/u)?.[1]||[]).map(normalize);
+ return !allowed.length||allowed.includes(normalize(hit.category));
+}
+
 // These are mappings to OSM's real taxonomy, not inventories or canned results.
 const taxonomy:[RegExp,string,string[]][]=[
  [/раскраск|книжк[аиу]|книг[аиу]|канцеляр/iu,'Книги и канцтовары',['["shop"="books"]','["shop"="stationery"]','["shop"="toys"]']],
@@ -45,7 +53,7 @@ const taxonomy:[RegExp,string,string[]][]=[
  [/автозапчаст|аккумулятор|toyota|rav4|автотовар|моторн.*масл/iu,'Автотовары',['["shop"="car_parts"]']],
  [/корм|зоотовар|собак|кошк/iu,'Зоотовары',['["shop"="pet"]']],
  [/бров|тональн|помад|тушь|туши/iu,'Косметика',['["shop"="cosmetics"]']],
- [/ручк[аиу]?\s+шариков|шариков[а-яё]*\s+ручк|карандаш|тетрад|канцтовар/iu,'Канцтовары',['["shop"="stationery"]']],
+ [/ручк[аиу]?\s+шариков|шариков[а-яё]*\s+ручк|стерж[её]н[а-яё]*\s+(?:для\s+)?ручк|шариков[а-яё]*\s+стерж[её]н|карандаш|тетрад|канцтовар/iu,'Канцтовары',['["shop"="stationery"]','["shop"="books"]']],
  [/чайник|утюг|пылесос|кофевар/iu,'Бытовая техника',['["shop"="electronics"]','["shop"="houseware"]']],
  [/настольн.*ламп|ламп.*(?:чтени|стол)|светильник/iu,'Освещение',['["shop"="lighting"]','["shop"="houseware"]','["shop"="doityourself"]']],
  [/ламп|светодиодн.*(?:e27|e14)/iu,'Освещение',['["shop"="lighting"]','["shop"="electrical"]','["shop"="doityourself"]']],
@@ -58,6 +66,7 @@ const taxonomy:[RegExp,string,string[]][]=[
  [/обув.*ремонт|ремонт.*обув/iu,'Ремонт обуви',['["craft"="shoemaker"]']],
  [/парикмах|стрижк/iu,'Парикмахерские',['["shop"="hairdresser"]']],
  [/кружк|керамическ.*(?:посуд|чашк)|посуд/iu,'Посуда',['["shop"="houseware"]','["shop"="pottery"]','["craft"="pottery"]']],
+ [/термос|термокружк|контейнер.*(?:для\s+)?еды/iu,'Посуда',['["shop"="houseware"]','["shop"="department_store"]','["shop"="outdoor"]']],
  [/куртк|пуховик|пальто|дубл[её]нк|шуб[а-яё]*|одежд|джинс|брюк|рубашк|свитер|толстовк|ветровк/iu,'Одежда',['["shop"="clothes"]','["shop"="department_store"]']],
  [/цвет/iu,'Цветы',['["shop"="florist"]']],
  [/кружк|посуд|тарелк|чашк/iu,'Посуда',['["shop"="houseware"]','["shop"="department_store"]']],
@@ -77,7 +86,8 @@ export function parseIntent(raw:string,city:string):Intent{
 }
 export function safeHTTP(value:unknown){if(typeof value!=='string')return null;try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:null;}catch{return null;}}
 export function canonical(value:string){return normalize(value).replace(/\s/g,'');}
-export function deduplicate(hits:SearchHit[],near?:GeoPoint){const map=new Map<string,SearchHit>();for(const h of hits){const key=h.kind==='product'?(h.site||h.source)+'|'+canonical(h.title):h.kind==='page'?h.source:canonical(h.title)+'|'+normalize(h.city)+'|'+(h.address?canonical(h.address):h.point?`${h.point.lat.toFixed(4)},${h.point.lng.toFixed(4)}`:h.id),existing=map.get(key);if(!existing){map.set(key,{...h,distanceKm:near&&h.point?km(near,h.point):null});continue;}map.set(key,{...existing,address:existing.address||h.address,point:existing.point||h.point,phone:existing.phone||h.phone,site:existing.site||h.site,image:existing.image||h.image,model:existing.model||h.model,brand:existing.brand||h.brand,characteristics:existing.characteristics?.length?existing.characteristics:h.characteristics,rating:existing.rating||h.rating,hours:existing.hours||h.hours,locationEvidence:existing.locationEvidence==='confirmed-point'||h.locationEvidence==='confirmed-point'?'confirmed-point':existing.locationEvidence||h.locationEvidence,locationSource:existing.locationSource||h.locationSource,shop:existing.shop||h.shop,distanceKm:near&& (existing.point||h.point)?km(near,(existing.point||h.point)!):existing.distanceKm});}return [...map.values()].sort((a,b)=>(a.kind==='product'?0:1)-(b.kind==='product'?0:1)||(a.distanceKm??Infinity)-(b.distanceKm??Infinity));}
+export function genericListing(h:SearchHit){return (h.kind==='product'||h.kind==='store')&&h.status!=='seller-confirmed'&&(/(?:купить по низким|купить по выгодным|купить по доступным|купить от\s*\d|большой выбор|широкий ассортимент|каталог товаров|все товары|цены от)/iu.test(h.title)||/\/(?:tag-page|catalog|category)\//iu.test(h.source));}
+export function deduplicate(hits:SearchHit[],near?:GeoPoint){const map=new Map<string,SearchHit>();for(const original of hits){const h=genericListing(original)?{...original,kind:'page' as const,price:null,address:null,point:null,locationEvidence:'unverified' as const}:original;const key=h.kind==='product'?(h.site||h.source)+'|'+canonical(h.title):h.kind==='page'?h.source:canonical(h.title)+'|'+normalize(h.city)+'|'+(h.address?canonical(h.address):h.point?`${h.point.lat.toFixed(4)},${h.point.lng.toFixed(4)}`:h.id),existing=map.get(key);if(!existing){map.set(key,{...h,distanceKm:near&&h.point?km(near,h.point):null});continue;}map.set(key,{...existing,address:existing.address||h.address,point:existing.point||h.point,phone:existing.phone||h.phone,site:existing.site||h.site,image:existing.image||h.image,model:existing.model||h.model,brand:existing.brand||h.brand,characteristics:existing.characteristics?.length?existing.characteristics:h.characteristics,rating:existing.rating||h.rating,hours:existing.hours||h.hours,locationEvidence:existing.locationEvidence==='confirmed-point'||h.locationEvidence==='confirmed-point'?'confirmed-point':existing.locationEvidence||h.locationEvidence,locationSource:existing.locationSource||h.locationSource,shop:existing.shop||h.shop,distanceKm:near&& (existing.point||h.point)?km(near,(existing.point||h.point)!):existing.distanceKm});}return [...map.values()].sort((a,b)=>(a.kind==='product'?0:1)-(b.kind==='product'?0:1)||(a.distanceKm??Infinity)-(b.distanceKm??Infinity));}
 export function hasConfirmedLocation(h:MappableHit){return h.kind!=='page'&&!!h.address?.trim()&&!!h.point&&Number.isFinite(h.point.lat)&&Number.isFinite(h.point.lng)&&Math.abs(h.point.lat)<=85&&Math.abs(h.point.lng)<=180&&(h.locationEvidence==='confirmed-point'||h.shop?.addressConfirmed===true);}
 export function routeHit(h:MappableHit,from?:GeoPoint){return hasConfirmedLocation(h)&&h.point?'https://yandex.ru/maps/?'+new URLSearchParams({rtext:`${from?`${from.lat},${from.lng}`:''}~${h.point.lat},${h.point.lng}`,rtt:'auto'}):null;}
 function hostName(url:string|null|undefined){try{return new URL(url||'').hostname.replace(/^www\./,'').toLowerCase();}catch{return '';}}

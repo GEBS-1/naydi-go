@@ -16,6 +16,17 @@ export function mergePersonal(remote:Personal,local:Personal):Personal{
  const sk=(s:SavedSearch)=>JSON.stringify([s.query.trim().toLowerCase(),s.city.trim().toLowerCase(),s.filter,s.context||null]);
  return personalSchema.parse({version:1,favorites:unique(remote.favorites,local.favorites,x=>x.id),searches:unique(remote.searches,local.searches,sk),history:unique(remote.history,local.history,sk).sort((a,b)=>b.at-a.at).slice(0,100),collections:unique(remote.collections,local.collections,x=>x.id)});
 }
+/** Apply changes made on this device since its last sync to a newer account copy. */
+export function rebasePersonal(remote:Personal,base:Personal,local:Personal):Personal{
+ const reconcile=<T extends {id:string}>(server:T[],before:T[],now:T[])=>{
+  const old=new Map(before.map(item=>[item.id,item]));
+  const current=new Map(now.map(item=>[item.id,item]));
+  const removed=new Set(before.filter(item=>!current.has(item.id)).map(item=>item.id));
+  const changed=now.filter(item=>!old.has(item.id)||JSON.stringify(old.get(item.id))!==JSON.stringify(item));
+  return [...changed,...server.filter(item=>!removed.has(item.id)&&!changed.some(change=>change.id===item.id))];
+ };
+ return personalSchema.parse({version:1,favorites:reconcile(remote.favorites,base.favorites,local.favorites).slice(0,500),searches:reconcile(remote.searches,base.searches,local.searches).slice(0,100),history:reconcile(remote.history,base.history,local.history).slice(0,100),collections:reconcile(remote.collections,base.collections,local.collections).slice(0,100)});
+}
 export function emptyPersonal():Personal{return {version:1,favorites:[],searches:[],history:[],collections:[]};}
 export function readPersonal():Personal{if(typeof window==='undefined')return emptyPersonal();try{const raw=localStorage.getItem(personalKey);return raw?personalSchema.parse(JSON.parse(raw)):emptyPersonal();}catch{return emptyPersonal();}}
 export function updatePersonal(change:(p:Personal)=>Personal){let current:Personal;try{const raw=localStorage.getItem(personalKey);current=raw?personalSchema.parse(JSON.parse(raw)):emptyPersonal();}catch{throw Error('Сохранения недоступны или имеют неизвестный формат. Исходные данные не изменены.');}const next=personalSchema.parse(change(current));try{localStorage.setItem(personalKey,JSON.stringify(next));}catch{throw Error('Не удалось сохранить на устройстве: хранилище недоступно или заполнено.');}window.dispatchEvent(new Event(personalEvent));return next;}

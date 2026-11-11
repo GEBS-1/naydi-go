@@ -3,7 +3,7 @@ import {trackProductEvent} from '@/lib/product-events';
 import {explicitCityCandidate} from '@/lib/location-context';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {ChevronDown,Search,MapPin} from 'lucide-react';
+import {ChevronDown,Search,MapPin,Car,House,Laptop, Dumbbell,Leaf,PawPrint,Navigation,ShieldCheck,Zap,Layers3} from 'lucide-react';
 import {type Product,type Shop} from '@/lib/model';
 import {parseIntent,mapHitShop,safeHTTP,hasConfirmedLocation,routeHit} from '@/lib/city-search';
 import type {PublicSearchResponse as SearchResponse} from '@/lib/search-details';
@@ -15,6 +15,7 @@ import QueryExamples from './query-examples';
 
 
 import VoiceSearch from './voice-search';
+import PhotoSearch from './photo-search';
 import ResultCard from './result-card';
 import OffersMap from './offers';
 import ListingMap,{ListingMapPreview} from './listing-map';
@@ -24,6 +25,9 @@ import JourneySearch,{Address} from '../journey-search';
 import './style.css';
 import './city.css';
 import './nearby.css';
+import './reference-home.css';
+import './reference-map.css';
+function pointWord(count:number){const last=count%10,tail=count%100;return tail>=11&&tail<=14?'точек':last===1?'точка':last>=2&&last<=4?'точки':'точек';}
 function resultCacheKey(city:string,query:string,near?:{lat:number;lng:number}){return `ng_search_result:v10:${cityKey(city)}:${near?near.lat.toFixed(3)+','+near.lng.toFixed(3):'city'}:${query.trim().toLocaleLowerCase('ru-RU')}`;}
 function cachedResult(city:string,query:string,near?:{lat:number;lng:number}){try{const saved=JSON.parse(localStorage.getItem(resultCacheKey(city,query,near))||'null') as {at:number;data:SearchResponse}|null;return saved&&Date.now()-saved.at<24*3600000?saved.data:null;}catch{return null;}}
 function rememberResult(city:string,query:string,data:SearchResponse,near?:{lat:number;lng:number}){try{localStorage.setItem(resultCacheKey(city,query,near),JSON.stringify({at:Date.now(),data}));}catch{/* private browsing or storage full */}}
@@ -33,6 +37,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  const replaying=useRef(false);const [filtersOpen,setFiltersOpen]=useState(false);
  const [guideStep,setGuideStep]=useState<number|null>(null);
  const [selectedHit,setSelectedHit]=useState('');
+ const [assistantQuery,setAssistantQuery]=useState('');
  const browseReturn=useRef('#home'),browseDraft=useRef(''),previousPage=useRef(page);
  const [shown,setShown]=useState(10);const manualCity=useRef(false);
  useEffect(()=>{setShown(10);setSelectedHit('');},[id,filter,city]);
@@ -115,24 +120,25 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  const productQuery=data?.intent.kind==='product'&&(filter==='all'||filter==='product');
  const productSearch=productQuery&&filter==='all';
  const mappedHits=hits.filter(hasConfirmedLocation);
+ const mappedProducts=mappedHits.filter(h=>h.kind==='product');
  const addressHits=productSearch
-  ?[...mappedHits.filter(h=>h.kind==='product'),...mappedHits.filter(h=>h.kind!=='product')]
+  ?[...mappedProducts,...mappedHits.filter(h=>h.kind!=='product'&&!(h.kind==='store'&&mappedProducts.some(product=>product.site&&product.site===h.site&&product.address===h.address)))]
   :mappedHits;
  const internetHits=hits.filter(h=>!hasConfirmedLocation(h));
  const sourceLinks=internetHits.filter(h=>h.kind==='page');
  const onlineOffers=internetHits.filter(h=>!sourceLinks.includes(h));
  const visibleHits=addressHits.slice(0,shown);
- const mappableHits=addressHits;
  const orderedHits=page==='map'&&selectedHit
   ? [...visibleHits.filter(h=>h.id===selectedHit),...visibleHits.filter(h=>h.id!==selectedHit)]
   : visibleHits;
  const showStoreFallback=productSearch;
  const mainHits=showStoreFallback?orderedHits.filter(h=>h.kind!=='store'):orderedHits;
- const fallbackStores=showStoreFallback?orderedHits.filter(h=>h.kind==='store'):[];
+ const fallbackStores=showStoreFallback?orderedHits.filter(h=>h.kind==='store').slice(0,Math.max(5,shown-5)):[];
+ const mappableHits=[...mainHits,...fallbackStores];
  const unlocatedProducts=productQuery?onlineOffers.filter(h=>h.kind==='product'):[];
  const otherOnlineOffers=onlineOffers.filter(h=>!unlocatedProducts.includes(h));
  const storeMap=new Map(mappableHits.map(h=>{const shop=mapHitShop(h,addressHits);return [shop.id,shop] as const;})),stores=[...storeMap.values()];
- const linkedProducts=mappableHits.filter(h=>h.kind==='product'||h.kind==='service').map(h=>({shopId:mapHitShop(h,addressHits).id,title:h.title,price:h.price,id:h.id,image:h.image,route:routeHit(h,near)}));
+ const linkedProducts=mappableHits.filter(h=>h.kind==='product'||h.kind==='service').map(h=>({shopId:mapHitShop(h,addressHits).id,title:h.title,price:h.price,id:h.id,image:h.image,route:routeHit(h,near),kind:h.kind==='service'?'service' as const:'product' as const,sellerConfirmed:h.status==='seller-confirmed'}));
  const mappedSelection=mappableHits.find(h=>h.id===selectedHit);
  const selectedShopId=mappedSelection?mapHitShop(mappedSelection,addressHits).id:undefined;
  function selectHit(id:string,scroll=false){const index=addressHits.findIndex(h=>h.id===id);if(index<0)return;setSelectedHit(id);setShown(n=>Math.max(n,index+1));if(scroll)window.setTimeout(()=>document.getElementById('search-hit-'+id)?.scrollIntoView({behavior:'smooth',block:'nearest'}),80);}
@@ -144,14 +150,20 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  return <div className={'finder nearby-focus finder-page-'+page}>
  {citySlot&&createPortal(cityButton,citySlot)}
  {cityEdit&&<form className="finder-city-form" onSubmit={e=>{e.preventDefault();const value=cleanCity(new FormData(e.currentTarget).get('city'));if(value.length<2)return;changeCity(value);if(pendingGeoSearch){location.hash='search/'+encodeURIComponent(pendingGeoSearch);setPendingGeoSearch('');}}}><label>Город<input name="city" defaultValue={city} minLength={2} maxLength={100} required autoFocus/></label><button className="finder-primary">Сохранить</button><button type="button" onClick={()=>{setCityEdit(false);setGeoExplain(true);}}>Определить автоматически</button><button type="button" aria-label="Закрыть выбор города" onClick={()=>setCityEdit(false)}>Закрыть</button></form>}
- {page==='home'?<div className="nearby-home home-layout" data-guide-step={guideStep??undefined}>
+ {page==='home'?<div className={'nearby-home home-layout reference-home'+(city.toLocaleLowerCase('ru-RU').startsWith('казан')?' city-kazan':'')} data-guide-step={guideStep??undefined}>
   <section className="home-search-intro" aria-labelledby="home-search-title">
-   <p className="nearby-eyebrow">НАЙДИGO · ПОИСК РЯДОМ</p>
-   <h1 id="home-search-title">Что ищете рядом?</h1>
-   <p className="nearby-lead">Опишите, что нужно купить. Покажем предложения, продавцов и точки рядом с вами.</p>
+   <p className="nearby-eyebrow">ТОВАРЫ И УСЛУГИ РЯДОМ</p>
+   <h1 id="home-search-title">Найди товары и услуги <span>рядом с тобой</span></h1>
+   <p className="nearby-lead">Опишите, что вам нужно. НайдиGo покажет предложения из открытых источников и объявления продавцов в вашем городе.</p>
+   <div className="home-benefits" aria-label="Возможности НайдиGo"><span><Zap size={19}/>Поиск по запросу</span><span><Navigation size={19}/>Точки рядом</span><span><ShieldCheck size={19}/>Честный статус наличия</span><span><Layers3 size={19}/>Список и карта</span></div>
    <div className="home-guide-search">{searchBox}</div>
    <div className="home-guide-location">{locationControl}</div>
+   <div className="home-photo-search"><PhotoSearch onQuery={text=>{setQuery(text);void submit(text);}}/></div>
   </section>
+  <section className="home-category-row" aria-label="Направления поиска">
+   {([['Автотовары','Авто и запчасти',Car],['Дом и ремонт','Дом и ремонт',House],['Электроника','Электроника',Laptop],['Спорт и хобби','Спорт и отдых',Dumbbell],['Сад и дача','Сад и огород',Leaf],['Зоотовары','Зоотовары',PawPrint]] as const).map(([value,label,Icon])=><button type="button" key={value} onClick={()=>void submit(value)}><Icon size={27} aria-hidden="true"/><span>{label}</span></button>)}
+  </section>
+  <div className="home-perplexity-note"><strong>Поиск по интернету и объявлениям</strong><span>Сначала покажем доступные предложения. Адрес, цену и наличие указываем только при наличии данных.</span><a href="#map/">Посмотреть точки на карте →</a></div>
   <div className="home-search-steps" aria-label="Как работает НайдиGo">
    <div><span>1</span><strong>Расскажите, что ищете</strong><small>Товар, задача или голосовой запрос</small></div>
    <div><span>2</span><strong>Сравните варианты</strong><small>Карточки, продавцы и точки на карте</small></div>
@@ -173,7 +185,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  {error&&<p role="alert" className="finder-error">{error}</p>}
  {page==='browse'&&<ListingMap city={city} near={near} onChooseCity={()=>setCityEdit(true)} onRequestLocation={()=>setGeoExplain(true)}/>}
  {searchPage==='results'&&<>
- <div className="nearby-toolbar"><div className="nearby-result-count">{busy?'Ищем рядом…':stores.length?`${stores.length} ${stores.length===1?'точка':stores.length<5?'точки':'точек'} на карте`:'Подтверждённых точек пока нет'}</div><div className="nearby-view"><button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)}>Фильтры</button><a aria-current={page!=='map'?'page':undefined} href={'#search/'+encodeURIComponent(id)}>Список</a><a aria-current={page==='map'?'page':undefined} href={'#map/'+encodeURIComponent(id)}>Карта</a></div></div>
+ <div className="nearby-toolbar"><div className="nearby-result-count">{busy?'Ищем рядом…':stores.length?`${stores.length} ${pointWord(stores.length)} на карте`:'Подтверждённых точек пока нет'}</div><div className="nearby-view"><button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)}>Фильтры</button><a aria-current={page!=='map'?'page':undefined} href={'#search/'+encodeURIComponent(id)}>Список</a><a aria-current={page==='map'?'page':undefined} href={'#map/'+encodeURIComponent(id)}>Карта</a></div></div>
  {filtersOpen&&<div className="finder-tabs nearby-filters">{[['all','Все'],['product','Товары'],['store','Магазины'],['service','Услуги'],['page','Сайты']].map(([value,label])=><button aria-pressed={filter===value} key={value} onClick={()=>setFilter(value)}>{label}</button>)}{data&&<button onClick={()=>void(async()=>{rememberSearch({query:data.context.query,city,filter,context:data.context},true);trackProductEvent('saved_search',city);setNote('Поиск сохранён.');})()}>Сохранить поиск</button>}</div>}
  {journey?<JourneySearch key={city} query={query} city={city} near={near} card={card} onNearby={()=>{setJourney(false);void run(query);}}/>:<>
  {!!data?.intent.clarification.length&&<p className="nearby-status">Уточните: {data.intent.clarification.map(q=><button key={q} onClick={()=>submit(q)}>{q}</button>)}</p>}
@@ -199,7 +211,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
   <p>На этих страницах не удалось выделить конкретное предложение.</p>
   <ul className="nearby-source-links">{sourceLinks.slice(0,shown).map(h=>{const url=safeHTTP(h.site)||safeHTTP(h.source);return url?<li key={h.id}><a href={url} target="_blank" rel="noreferrer">{h.title}</a></li>:null;})}</ul>
  </details>}
- </div><aside><OffersMap compact productSearch={productQuery} stores={stores} offers={[]} linkedProducts={linkedProducts} selectedId={selectedShopId} selectedHitId={selectedHit} onSelect={selectShop} onSelectHit={id=>selectHit(id,true)} near={near} onRequestLocation={()=>setGeoExplain(true)}/></aside></div>
+ </div><aside><OffersMap compact productSearch={productQuery} stores={stores} offers={[]} linkedProducts={linkedProducts} selectedId={selectedShopId} selectedHitId={selectedHit} onSelect={selectShop} onSelectHit={id=>selectHit(id,true)} near={near} onRequestLocation={()=>setGeoExplain(true)}/></aside>{page==='map'&&<section className="search-assistant" aria-label="Помощник по поиску"><div className="search-assistant-head"><span aria-hidden="true">✦</span><div><strong>Помощник НайдиGo</strong><small>Уточните, что вам нужно</small></div></div><p>Опишите товар или задачу своими словами. Я обновлю карточки и точки по вашему запросу.</p><div className="search-assistant-actions"><button type="button" onClick={()=>setGeoExplain(true)}>Найти ближе ко мне</button><button type="button" onClick={()=>setAssistantQuery(query+' рядом')}>Уточнить запрос</button><a href="/sell">Разместить товар</a></div><form onSubmit={e=>{e.preventDefault();void submit(assistantQuery);}}><label htmlFor="search-assistant-query">Ваш запрос</label><textarea id="search-assistant-query" value={assistantQuery} onChange={e=>setAssistantQuery(e.target.value)} rows={3} maxLength={500} placeholder="Например: свечной ключ 16 мм рядом"/><button type="submit" disabled={!assistantQuery.trim()}>Найти предложения</button></form></section>}</div>
  </>}
  </>}
  </div>;

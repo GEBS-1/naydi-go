@@ -5,6 +5,8 @@ import {routeHit,safeHTTP,type PublicSearchHit} from '@/lib/city-search';
 import {trackProductEvent} from '@/lib/product-events';
 import {money} from '@/lib/model';
 import type {SearchDetails} from '@/lib/search-details';
+import {FavoriteButton} from '../personal';
+import './reference-favorites.css';
 
 export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:PublicSearchHit;near?:{lat:number;lng:number};selected?:boolean;onSelect?:()=>void}){
  const [details,setDetails]=useState<SearchDetails|null>(null),[expanded,setExpanded]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState('');
@@ -35,10 +37,11 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
  const phone=details?.phone?.split(';')[0].trim(),phoneHref=phone?'tel:'+phone.replace(/[^+\d]/g,''):'';
  const source=safeHTTP(details?.source),site=safeHTTP(details?.site);
  const website=h.kind==='product'?source||site:site||source;
+ const favoriteUrl=h.status==='seller-confirmed'&&h.product?'#product/'+h.product.id:h.shop?.id&&h.status==='seller-confirmed'?'#store/'+h.shop.id:sourceUrl||safeHTTP(h.site)||'#search/'+encodeURIComponent(h.title);
  return <article id={'search-hit-'+h.id} tabIndex={-1} data-selected={selected||undefined} onClick={onSelect} onFocus={onSelect} className={'search-hit nearby-card'+(h.kind==='product'?' nearby-product':'')+(h.product&&h.shop&&h.status==='seller-confirmed'?' nearby-listing':'')}>
   <ResultImage key={image||h.source} src={image} title={h.title}/>
   <div className="nearby-card-body">
-   <div className="nearby-card-heading"><h2><button type="button" className="nearby-title" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{h.title}</button></h2>{h.price!==null?<strong>{h.product?.priceMode==='free'?'Бесплатно':money(h.price)}</strong>:h.product?.priceMode==='negotiable'?<strong>Договорная</strong>:h.kind==='product'?<span className="nearby-price-unknown">Цена не указана</span>:null}</div>
+   <div className="nearby-card-heading"><h2><button type="button" className="nearby-title" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{h.title}</button></h2>{h.price!==null?<strong>{h.product?.priceMode==='free'?'Бесплатно':money(h.price)}</strong>:h.product?.priceMode==='negotiable'?<strong>Договорная</strong>:h.kind==='product'?<span className="nearby-price-unknown">Цена не указана</span>:null}<FavoriteButton item={{id:h.kind+':'+h.id,title:h.title,kind:h.kind,url:favoriteUrl,city:h.city,image:image||undefined,price:h.price,checkedAt:h.checkedAt}}/></div>
    {sourceLabel&&<small className="nearby-source-label">{sourceLabel}</small>}
    {(h.model||h.brand)&&<p className="nearby-model">{[h.brand,h.model].filter(Boolean).join(' · ')}</p>}
    {expanded&&!!h.characteristics?.length&&<p className="nearby-specs">{h.characteristics.map(x=>x.name+': '+x.value).join(' · ')}</p>}
@@ -49,6 +52,7 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
    <div className="nearby-card-actions">
     {h.kind==='product'&&h.evidence==='search-index'&&h.price!==null&&<small>Цена из поискового фрагмента · уточните у продавца</small>}
     {h.product&&h.shop?.chatAvailable&&<a href={'/messages?product='+encodeURIComponent(h.product.id)}><MessageCircle size={15}/>Написать продавцу</a>}
+   {h.kind==='product'&&sourceUrl&&<a href={sourceUrl} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('seller_click',h.city)}><ExternalLink size={15}/>Товар у продавца</a>}
     {route&&<a className="nearby-route" href={route} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('route_click',h.city)}><Navigation size={15}/>Маршрут</a>}
     <button type="button" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{loading?'Открываем…':expanded?'Скрыть подробности':'Описание и контакты'}</button>
    </div>

@@ -16,8 +16,16 @@ assert.deepEqual(webSearchPayload('карандаш для бровей','Каз
 assert.deepEqual(webSearchPayload('дрель','Казань'),{query:'дрель',city:'Казань'},'coordinates are included only when the user granted a location');
 console.log('PASS: unified Perplexity request carries the selected query, city and permitted approximate location.');
 const {hasFreshOwnedStock,offerAvailabilityAdjustment,offerFreshness,relevantOffers}=await bundled('lib/offer-relevance.ts');
-const {parseIntent}=await bundled('lib/city-search.ts');
+const {parseIntent,deduplicate}=await bundled('lib/city-search.ts');
+const categoryPage={id:'web:catalog',kind:'product',status:'website',title:'Велосипедные насосы в Казани. Купить по низким ценам',description:'',category:'',city:'Казань',address:'ул. Родины, 7Б',point:{lat:55.77,lng:49.19},phone:null,site:'https://example.org/velosipedy/nasosy-velosipednye.html',hours:null,source:'https://example.org/velosipedy/nasosy-velosipednye.html',checkedAt:'',price:null,image:null,distanceKm:null};
+assert.equal(deduplicate([categoryPage])[0].kind,'page','a catalog page cannot become a concrete product or map pin');
+assert.equal(deduplicate([{...categoryPage,kind:'store',status:'organization'}])[0].kind,'page','a catalog heading cannot become a store pin');
+assert.equal(deduplicate([{...categoryPage,title:'Карандаши для бровей — купить от 108 ₽',price:108}])[0].price,null,'a category starting price is not one product price');
+assert.equal(deduplicate([{...categoryPage,title:'Насос HPS-295-3',price:160}])[0].kind,'product');
 assert.equal(parseIntent('лампа светодиодная E27 12 Вт','Казань').category,'Освещение');
+assert.equal(parseIntent('синий шариковый стержень для ручки','Казань').category,'Канцтовары');
+assert.equal(parseIntent('термос 1 литр','Казань').category,'Посуда');
+assert.equal(parseIntent('карандаш для бровей','Казань').category,'Косметика');
 assert.ok(offerAvailabilityAdjustment({kind:'product',sourceAvailability:'in_stock'})>0);
 assert.ok(offerAvailabilityAdjustment({kind:'product',sourceAvailability:'out_of_stock'})<0);
 assert.equal(offerAvailabilityAdjustment({kind:'store',sourceAvailability:'in_stock'}),0);

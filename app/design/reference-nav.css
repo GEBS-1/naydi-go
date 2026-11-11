@@ -1,0 +1,3 @@
+.ng-app .d-header{gap:22px}.ng-app .d-header nav{gap:14px;align-items:center}.ng-app .d-header nav a{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-weight:600}.ng-app .d-header nav a:hover{color:#075eff}.ng-app .d-bottom.nearby-bottom{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1150px){.ng-app .d-header nav{gap:9px;font-size:12px}.ng-app .d-business-link{font-size:12px}}
+@media(max-width:900px){.ng-app .d-header nav{display:none}.ng-app .d-header{gap:12px}}

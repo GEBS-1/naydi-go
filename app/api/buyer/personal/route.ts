@@ -2,6 +2,7 @@ import {db} from '@/db';
 import {buyerIdentity,buyerOrigin} from '@/lib/buyer-auth';
 import {emptyPersonal,personalSchema,mergePersonal} from '@/lib/personal';
 import {privateResponse,quota} from '@/lib/discovery-server';
+import {z} from 'zod';
 export async function GET(req:Request){const user=await buyerIdentity(req);if(!user)return privateResponse({error:'Войдите в аккаунт'},401);const row=await db().prepare('SELECT data,version FROM buyer_personal WHERE buyer_id=?').bind(user.id).first<{data:string;version:number}>();return privateResponse({data:row?personalSchema.parse(JSON.parse(row.data)):emptyPersonal(),version:row?.version||0});}
 export async function POST(req:Request){try{
  buyerOrigin(req);const user=await buyerIdentity(req);if(!user)return privateResponse({error:'Войдите в аккаунт'},401);await quota(user.id,'personal-sync',30);
@@ -14,3 +15,13 @@ export async function POST(req:Request){try{
   if(result.meta.changes)return privateResponse({data,version:(row?.version||0)+1});
  }return privateResponse({error:'Сохранения изменились в другой вкладке. Повторите перенос.'},409);
  }catch{return privateResponse({error:'Не удалось перенести сохранения. Локальная копия не изменена; проверьте лимиты и повторите.'},400);}}
+export async function PUT(req:Request){try{
+ buyerOrigin(req);const user=await buyerIdentity(req);if(!user)return privateResponse({error:'Войдите в аккаунт'},401);await quota(user.id,'personal-update',120);
+ const raw=await req.text();if(raw.length>1000000)return privateResponse({error:'Слишком большой объём сохранений'},413);
+ const {version,data}=z.object({version:z.number().int().nonnegative(),data:personalSchema}).parse(JSON.parse(raw));
+ const row=await db().prepare('SELECT version FROM buyer_personal WHERE buyer_id=?').bind(user.id).first<{version:number}>();
+ if((row?.version||0)!==version)return privateResponse({error:'Сохранения изменились в другой вкладке'},409);
+ const result=row?await db().prepare('UPDATE buyer_personal SET data=?,version=version+1,updated_at=? WHERE buyer_id=? AND version=?').bind(JSON.stringify(data),Date.now(),user.id,version).run():await db().prepare('INSERT OR IGNORE INTO buyer_personal(buyer_id,data,version,updated_at) VALUES(?,?,1,?)').bind(user.id,JSON.stringify(data),Date.now()).run();
+ if(!result.meta.changes)return privateResponse({error:'Сохранения изменились в другой вкладке'},409);
+ return privateResponse({data,version:version+1});
+ }catch{return privateResponse({error:'Не удалось сохранить изменения'},400);}}
