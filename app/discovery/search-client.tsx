@@ -3,7 +3,7 @@ import {trackProductEvent} from '@/lib/product-events';
 import {explicitCityCandidate} from '@/lib/location-context';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {ChevronDown,Search,MapPin,Car,House,Laptop,Dumbbell,Leaf,PawPrint,Navigation,Camera,ShieldCheck,Zap,Layers3,LayoutGrid,Sparkles,Check,Store} from 'lucide-react';
+import {ChevronDown,Search,MapPin,Car,House,Laptop,Dumbbell,Leaf,PawPrint,Navigation,Camera,ShieldCheck,Zap,Layers3,LayoutGrid,Sparkles} from 'lucide-react';
 import {type Product,type Shop} from '@/lib/model';
 import {parseIntent,mapHitShop,safeHTTP,hasConfirmedLocation,routeHit} from '@/lib/city-search';
 import type {PublicSearchResponse as SearchResponse} from '@/lib/search-details';
@@ -17,6 +17,7 @@ import PhotoSearch from './photo-search';
 import ResultCard from './result-card';
 import OffersMap from './offers';
 import ListingMap from './listing-map';
+import HomeListingFeed from './home-listing-feed';
 import JourneySearch,{Address} from '../journey-search';
 import './style.css';
 import './city.css';
@@ -164,7 +165,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
   <section className="home-search-intro" aria-labelledby="home-search-title">
    <h1 id="home-search-title">Найди товары и услуги <span>рядом с тобой</span></h1>
    <p className="nearby-lead">Умный поиск по магазинам, услугам и объявлениям. Ищем предложения для тебя через Perplexity и у реальных продавцов в твоём городе.</p>
-   <div className="home-benefits" aria-label="Возможности НайдиGo"><span><Zap size={19}/>Быстрый поиск в реальном времени</span><span><MapPin size={19}/>Рядом с вами магазины и услуги</span><span><ShieldCheck size={19}/>Актуальные цены и наличие</span><span><Layers3 size={19}/>Один сервис для всего</span></div>
+   <div className="home-benefits" aria-label="Возможности НайдиGo"><span><Zap size={19}/>Быстрый поиск предложений</span><span><MapPin size={19}/>Магазины и услуги рядом</span><span><ShieldCheck size={19}/>Цена и наличие с отметкой источника</span><span><Layers3 size={19}/>Один сервис для всего</span></div>
    <div className="home-guide-search">{searchBox}</div>
    <div className="home-photo-search"><PhotoSearch inputId="home-search-image" onQuery={text=>{setQuery(text);void submit(text);}}/></div>
   </section>
@@ -173,11 +174,11 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
    <button type="button" onClick={()=>{location.hash='map/';}}><LayoutGrid size={27} aria-hidden="true"/><span>Все категории</span></button>
   </section>
   <section className="home-perplexity-card" aria-labelledby="home-perplexity-title">
-   <div className="home-perplexity-copy"><Sparkles size={18} aria-hidden="true"/><div><strong id="home-perplexity-title">Поиск с Perplexity</strong><p>Находим предложения по магазинам, сайтам и объявлениям, сравниваем цены и показываем ближайшие варианты на карте.</p></div></div>
-   <div className="home-perplexity-art" aria-hidden="true"><Store size={28}/><MapPin size={22}/></div>
-   <ul>{['Поиск по интернету','Реальные магазины рядом','Удобный маршрут'].map(item=><li key={item}><Check size={16} aria-hidden="true"/>{item}</li>)}</ul>
+   <div className="home-perplexity-copy"><Sparkles size={18} aria-hidden="true"/><div><strong id="home-perplexity-title">Помощник НайдиGo</strong><p>Опишите задачу своими словами. Поиск соберёт подходящие предложения и покажет точки на карте.</p></div></div>
+   <a className="home-assistant-open" href="#map/">Открыть помощника</a>
   </section>
-  <section className="home-popular" aria-labelledby="home-popular-title"><h2 id="home-popular-title">Популярные запросы{city?` в ${city}`:''}</h2><div>{popularQueries.map(item=><button type="button" key={item} onClick={()=>void submit(item)}><Search size={15} aria-hidden="true"/>{item}</button>)}</div></section>
+  <HomeListingFeed city={city} near={near||null}/>
+  <section className="home-popular" aria-labelledby="home-popular-title"><h2 id="home-popular-title">Примеры запросов{city?` для города ${city}`:''}</h2><div>{popularQueries.map(item=><button type="button" key={item} onClick={()=>void submit(item)}><Search size={15} aria-hidden="true"/>{item}</button>)}</div></section>
  </div>:page==='browse'?<><a className="listing-map-back" href={browseReturn.current}>← Назад к поиску</a>{locationControl}</>:<>{searchBox}{locationControl} {page==='map'&&<nav className="map-search-categories" aria-label="Направления поиска">
    <a href="#map/" aria-current={!id?'page':undefined}>Все</a>
    {searchCategories.map(([value,label,Icon])=><a key={value} href={'#map/'+encodeURIComponent(value)} aria-current={id===value?'page':undefined}><Icon size={18} aria-hidden="true"/>{label}</a>)}

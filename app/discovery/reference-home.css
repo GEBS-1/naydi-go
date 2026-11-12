@@ -38,6 +38,13 @@
 .home-perplexity-card ul{display:grid;gap:8px;margin:0;padding:0;list-style:none;font-weight:700}.home-perplexity-card li{display:flex;align-items:center;gap:8px}.home-perplexity-card li svg{color:#12a15b}
 .home-popular{grid-area:popular}.home-popular h2{margin:0 0 14px;font-size:28px;letter-spacing:-.04em}.home-popular div{display:flex;flex-wrap:wrap;gap:10px}.home-popular button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #e3ebf6;border-radius:999px;background:#fff;color:#1b2b45;font-weight:650;box-shadow:0 6px 16px #1939610c}.home-popular button svg{color:#075bfb}.home-popular button:hover{border-color:#8cb7ff;background:#f5f9ff}
 .home-inline-camera { display: grid; place-items: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: #0866ff; border-radius: 12px; }
+.finder .reference-home.home-layout{grid-template-areas:"intro" "note" "feed" "categories" "popular" !important}
+.reference-home.city-kazan .home-search-intro{background:linear-gradient(90deg,#f7fafff7 0%,#f7faffe8 36%,#f7faffb0 60%,#f7faff00 83%),url('/hero-rainy-search.webp') right center/cover}
+.reference-home .home-search-intro{border-radius:24px;margin-top:0}
+.home-perplexity-card{grid-template-columns:minmax(0,1fr) auto;gap:18px;padding:18px 22px;border-radius:20px;margin:0}
+.home-perplexity-copy strong{font-size:19px}.home-perplexity-copy p{font-size:13px}
+.home-assistant-open{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 17px;border-radius:12px;background:#075bfb;color:#fff;font-weight:750;text-decoration:none;white-space:nowrap}
+@media(max-width:800px){.finder .reference-home.home-layout{grid-template-areas:"intro" "note" "feed" "categories" "popular" !important}.reference-home.city-kazan .home-search-intro{background:linear-gradient(180deg,#f7fafff5 0%,#f7faffed 66%,#f7faffb8),url('/hero-rainy-search.webp') 68% center/cover}.home-perplexity-card{grid-template-columns:1fr}.home-assistant-open{justify-self:start}}
 @media (min-width: 1200px) {
  .home-inline-camera { display: grid; place-items: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: #0866ff; border-radius: 12px; }
  .home-inline-camera:hover { background: #edf4ff; }
