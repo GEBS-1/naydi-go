@@ -30,7 +30,9 @@
 
 .map-search-categories{display:flex;gap:10px;overflow-x:auto;padding:8px 2px 12px}
 .map-search-categories a{display:inline-flex;align-items:center;gap:8px;flex:none;padding:10px 16px;border:1px solid #dce7f6;border-radius:18px;background:#fff;color:#16243a;font-size:14px;font-weight:650;text-decoration:none}
-.map-search-categories a:hover,.map-search-categories a[aria-current=page]{background:#e7f1ff;color:#075be1;border-color:#b6d4ff}
+.map-search-categories a:hover{background:#f4f8ff;border-color:#b6d4ff}
+.map-search-categories a[aria-current=page]{background:#075bfb;color:#fff;border-color:#075bfb}
+.map-search-categories a[aria-current=page] svg{color:#fff}
 
 
 @media (min-width: 1200px) {

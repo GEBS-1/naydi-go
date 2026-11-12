@@ -1,3 +1,22 @@
-.ng-app .d-header{gap:22px}.ng-app .d-header nav{gap:14px;align-items:center}.ng-app .d-header nav a{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-weight:600}.ng-app .d-header nav a:hover{color:#075eff}.ng-app .d-bottom.nearby-bottom{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media(max-width:1150px){.ng-app .d-header nav{gap:9px;font-size:12px}.ng-app .d-business-link{font-size:12px}}
-@media(max-width:900px){.ng-app .d-header nav{display:none}.ng-app .d-header{gap:12px}}
+.ng-app .reference-header{display:flex;align-items:center;gap:18px;height:74px;padding:0 28px;background:#fff;border-bottom:1px solid #e6eef8}
+.ng-app .reference-header nav{display:flex;gap:16px;align-items:center}
+.ng-app .reference-header nav a{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#24324a;font-size:15px;font-weight:650}
+.ng-app .reference-header nav a:hover,.ng-app .reference-header nav a[aria-current="page"]{color:#075eff}
+.reference-header .header-tools{margin-left:auto;display:flex;align-items:center;gap:12px}
+.reference-header .header-fav,.reference-header .header-bell{display:inline-flex;align-items:center;gap:6px;color:#24324a;font-weight:650}
+.reference-header .header-bell{width:40px;height:40px;justify-content:center;border-radius:999px}
+.reference-header .header-bell:hover,.reference-header .header-fav:hover{color:#075eff;background:#f3f7ff}
+.reference-header .account-shortcut{background:#fff;border:1px solid #e3ebf6;color:#1c2b44;border-radius:999px;padding:0 14px}
+.reference-header-home .d-business-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:0;padding:0 16px;border-radius:14px;background:#075bfb;color:#fff;font-weight:750}
+.reference-header-home .d-business-link:hover{background:#054ed6}
+.header-categories{position:relative}
+.header-categories summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;list-style:none;color:#24324a;font-weight:650}
+.header-categories summary::-webkit-details-marker{display:none}
+.header-categories summary:after{content:"▾";font-size:11px;color:#6b7c96}
+.header-categories div{position:absolute;z-index:20;top:calc(100% + 10px);left:0;display:grid;min-width:220px;padding:8px;border:1px solid #e3ebf6;border-radius:14px;background:#fff;box-shadow:0 16px 40px #17315a1f}
+.header-categories a{padding:10px 12px;border-radius:10px;color:#1c2b44;font-weight:650}
+.header-categories a:hover{background:#f3f7ff;color:#075eff}
+.reference-header-profile .account-shortcut{width:40px;height:40px;padding:0;justify-content:center;border-radius:999px}
+.reference-header-profile .account-shortcut span{display:none}
+@media(max-width:1150px){.ng-app .reference-header nav{gap:8px;font-size:13px}.reference-header .header-fav span{display:none}}
+@media(max-width:900px){.ng-app .reference-header nav{display:none}.reference-header .header-tools{gap:6px}}

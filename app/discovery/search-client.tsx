@@ -3,24 +3,20 @@ import {trackProductEvent} from '@/lib/product-events';
 import {explicitCityCandidate} from '@/lib/location-context';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {ChevronDown,Search,MapPin,Car,House,Laptop, Dumbbell,Leaf,PawPrint,Navigation,Camera,ShieldCheck,Zap,Layers3} from 'lucide-react';
+import {ChevronDown,Search,MapPin,Car,House,Laptop,Dumbbell,Leaf,PawPrint,Navigation,Camera,ShieldCheck,Zap,Layers3,LayoutGrid,Sparkles,Check,Store} from 'lucide-react';
 import {type Product,type Shop} from '@/lib/model';
 import {parseIntent,mapHitShop,safeHTTP,hasConfirmedLocation,routeHit} from '@/lib/city-search';
 import type {PublicSearchResponse as SearchResponse} from '@/lib/search-details';
 import {resolveSearch,type SearchContext} from '@/lib/search-context';
 import {cleanCity,cityKey} from '@/lib/location';
 import {rememberSearch,takeReplay} from '@/lib/personal';
-import SearchHistory from '../search-history';
-import QueryExamples from './query-examples';
 
 
 import VoiceSearch from './voice-search';
 import PhotoSearch from './photo-search';
 import ResultCard from './result-card';
 import OffersMap from './offers';
-import ListingMap,{ListingMapPreview} from './listing-map';
-import SearchGuide from './search-guide';
-import {PlayCircle} from 'lucide-react';
+import ListingMap from './listing-map';
 import JourneySearch,{Address} from '../journey-search';
 import './style.css';
 import './city.css';
@@ -35,7 +31,6 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  const [query,setQuery]=useState(id),[city,setCity]=useState(''),[cityEdit,setCityEdit]=useState(false),[ready,setReady]=useState(false),[headerReady,setHeaderReady]=useState(false),[journey,setJourney]=useState(false),[near,setNear]=useState<{lat:number;lng:number}>(),[manual,setManual]=useState(false),[note,setNote]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[data,setData]=useState<SearchResponse|null>(null),[filter,setFilter]=useState('all');
  const searchPage=page==='home'||page==='browse'?page:'results';
  const replaying=useRef(false);const [filtersOpen,setFiltersOpen]=useState(false);
- const [guideStep,setGuideStep]=useState<number|null>(null);
  const [selectedHit,setSelectedHit]=useState('');
  const [assistantQuery,setAssistantQuery]=useState('');
  const browseReturn=useRef('#home'),browseDraft=useRef(''),previousPage=useRef(page);
@@ -93,7 +88,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
   location.hash=(page==='map'?'map/':'search/')+encodeURIComponent(pendingGeoSearch);
  }
  async function submit(q:string){
-  const text=q.trim();if(!text){if(page==='home')setGuideStep(0);return;}
+  const text=q.trim();if(!text)return;
   if(!parseIntent(text,city).journey&&explicitCityCandidate(text)){
    try{
     const response=await fetch('/api/location/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:text}),signal:AbortSignal.timeout(4500)});
@@ -157,42 +152,34 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  function selectHit(id:string,scroll=false){const index=addressHits.findIndex(h=>h.id===id);if(index<0)return;setSelectedHit(id);setShown(n=>Math.max(n,index+1));if(scroll)window.setTimeout(()=>document.getElementById('search-hit-'+id)?.scrollIntoView({behavior:'smooth',block:'nearest'}),80);}
  function selectShop(id:string){const linked=mappableHits.filter(h=>mapHitShop(h,addressHits).id===id);const target=linked.find(h=>h.kind==='product')||linked[0];if(target)selectHit(target.id,true);}
  const searchCategories=[['Автотовары','Авто и запчасти',Car],['Дом и ремонт','Дом и ремонт',House],['Электроника','Электроника',Laptop],['Спорт и хобби','Спорт и отдых',Dumbbell],['Сад и дача','Сад и огород',Leaf],['Зоотовары','Зоотовары',PawPrint]] as const;
- const searchBox=<VoiceSearch photoControl={page==="home"?<label className="home-inline-camera" htmlFor="home-search-image" title="Найти по фото"><Camera size={22} aria-hidden="true"/><span className="sr-only">Найти по фото</span></label>:undefined} value={query} onChange={setQuery} busy={false} onSearch={text=>submit(text??query)}/>;
+ const popularQueries=['Свечи Denso для RAV4','Замена масла','Ремонт телефона','Велосипед','Корм для собак','Шины 225/65 R17'];
+ const searchBox=<VoiceSearch placeholder={page==='home'?'Что вы ищете? Например: свечи Denso для RAV4, ремонт телефона, шиномонтаж...':undefined} photoControl={page==="home"?<label className="home-inline-camera" htmlFor="home-search-image" title="Найти по фото"><Camera size={22} aria-hidden="true"/><span className="sr-only">Найти по фото</span></label>:undefined} value={query} onChange={setQuery} busy={false} onSearch={text=>submit(text??query)}/>;
  const cityButton=<button type="button" className="finder-header-city" aria-label={`Текущий город: ${city||'не выбран'}. Изменить город`} onClick={()=>setCityEdit(true)}><MapPin size={17}/><span>{city||'Выбрать город'}</span><ChevronDown size={15}/></button>;
  const citySlot=headerReady?document.getElementById('buyer-city-slot'):null;
  const locationControl=<div className="nearby-location"><button type="button" onClick={()=>setGeoExplain(true)}><MapPin size={17}/>{near?`Рядом с вами · ${city}`:'Указать, где искать'}</button>{!near&&city&&<span>Сейчас — весь город {city}</span>}{page==="map"&&<button type="button" className="map-journey-toggle" aria-pressed={journey} onClick={()=>setJourney(value=>!value)}><Navigation size={17}/>По дороге</button>}</div>;
  return <div className={'finder nearby-focus finder-page-'+page}>
  {citySlot&&createPortal(cityButton,citySlot)}
  {cityEdit&&<form className="finder-city-form" onSubmit={e=>{e.preventDefault();const value=cleanCity(new FormData(e.currentTarget).get('city'));if(value.length<2)return;changeCity(value);if(pendingGeoSearch){location.hash=(page==='map'?'map/':'search/')+encodeURIComponent(pendingGeoSearch);setPendingGeoSearch('');}}}><label>Город<input name="city" defaultValue={city} minLength={2} maxLength={100} required autoFocus/></label><button className="finder-primary">Сохранить</button><button type="button" onClick={()=>{setCityEdit(false);setGeoExplain(true);}}>Определить автоматически</button><button type="button" aria-label="Закрыть выбор города" onClick={()=>setCityEdit(false)}>Закрыть</button></form>}
- {page==='home'?<div className={'nearby-home home-layout reference-home'+(city.toLocaleLowerCase('ru-RU').startsWith('казан')?' city-kazan':'')} data-guide-step={guideStep??undefined}>
+ {page==='home'?<div className={'nearby-home home-layout reference-home'+(city.toLocaleLowerCase('ru-RU').startsWith('казан')?' city-kazan':'')}>
   <section className="home-search-intro" aria-labelledby="home-search-title">
-   <p className="nearby-eyebrow">ТОВАРЫ И УСЛУГИ РЯДОМ</p>
    <h1 id="home-search-title">Найди товары и услуги <span>рядом с тобой</span></h1>
-   <p className="nearby-lead">Опишите, что вам нужно. НайдиGo покажет предложения из открытых источников и объявления продавцов в вашем городе.</p>
-   <div className="home-benefits" aria-label="Возможности НайдиGo"><span><Zap size={19}/>Поиск по запросу</span><span><Navigation size={19}/>Точки рядом</span><span><ShieldCheck size={19}/>Честный статус наличия</span><span><Layers3 size={19}/>Список и карта</span></div>
+   <p className="nearby-lead">Умный поиск по магазинам, услугам и объявлениям. Ищем предложения для тебя через Perplexity и у реальных продавцов в твоём городе.</p>
+   <div className="home-benefits" aria-label="Возможности НайдиGo"><span><Zap size={19}/>Быстрый поиск в реальном времени</span><span><MapPin size={19}/>Рядом с вами магазины и услуги</span><span><ShieldCheck size={19}/>Актуальные цены и наличие</span><span><Layers3 size={19}/>Один сервис для всего</span></div>
    <div className="home-guide-search">{searchBox}</div>
-   <div className="home-guide-location">{locationControl}</div>
    <div className="home-photo-search"><PhotoSearch inputId="home-search-image" onQuery={text=>{setQuery(text);void submit(text);}}/></div>
   </section>
   <section className="home-category-row" aria-label="Направления поиска">
    {(searchCategories).map(([value,label,Icon])=><button type="button" key={value} onClick={()=>void submit(value)}><Icon size={27} aria-hidden="true"/><span>{label}</span></button>)}
+   <button type="button" onClick={()=>{location.hash='map/';}}><LayoutGrid size={27} aria-hidden="true"/><span>Все категории</span></button>
   </section>
-  <div className="home-perplexity-note"><strong>Поиск по интернету и объявлениям</strong><span>Сначала покажем доступные предложения. Адрес, цену и наличие указываем только при наличии данных.</span><a href="#map/">Посмотреть точки на карте →</a></div>
-  <div className="home-search-steps" aria-label="Как работает НайдиGo">
-   <div><span>1</span><strong>Расскажите, что ищете</strong><small>Товар, задача или голосовой запрос</small></div>
-   <div><span>2</span><strong>Сравните варианты</strong><small>Карточки, продавцы и точки на карте</small></div>
-   <div><span>3</span><strong>Идите за покупкой</strong><small>Откройте продавца или постройте маршрут</small></div>
-  </div>
-  <QueryExamples onChoose={text=>{
-   setQuery(text);
-   const input=document.querySelector<HTMLTextAreaElement>('.finder-search textarea');
-   input?.focus();
-   input?.scrollIntoView({block:'nearest'});
-  }}/>
-  <ListingMapPreview city={city} near={near} onOpen={()=>{browseReturn.current=location.hash||'#home';browseDraft.current=query;}}/>
-  <div className="home-help"><a href="/about#video"><PlayCircle size={17} aria-hidden="true"/>Смотреть видео</a><SearchGuide step={guideStep} onChange={setGuideStep}/></div>
-  <div className="home-history"><SearchHistory compact/></div>
- </div>:page==='browse'?<><a className="listing-map-back" href={browseReturn.current}>← Назад к поиску</a>{locationControl}</>:<>{searchBox}{locationControl}{page==='map'&&<nav className="map-search-categories" aria-label="Направления поиска">
+  <section className="home-perplexity-card" aria-labelledby="home-perplexity-title">
+   <div className="home-perplexity-copy"><Sparkles size={18} aria-hidden="true"/><div><strong id="home-perplexity-title">Поиск с Perplexity</strong><p>Находим предложения по магазинам, сайтам и объявлениям, сравниваем цены и показываем ближайшие варианты на карте.</p></div></div>
+   <div className="home-perplexity-art" aria-hidden="true"><Store size={28}/><MapPin size={22}/></div>
+   <ul>{['Поиск по интернету','Реальные магазины рядом','Удобный маршрут'].map(item=><li key={item}><Check size={16} aria-hidden="true"/>{item}</li>)}</ul>
+  </section>
+  <section className="home-popular" aria-labelledby="home-popular-title"><h2 id="home-popular-title">Популярные запросы{city?` в ${city}`:''}</h2><div>{popularQueries.map(item=><button type="button" key={item} onClick={()=>void submit(item)}><Search size={15} aria-hidden="true"/>{item}</button>)}</div></section>
+ </div>:page==='browse'?<><a className="listing-map-back" href={browseReturn.current}>← Назад к поиску</a>{locationControl}</>:<>{searchBox}{locationControl} {page==='map'&&<nav className="map-search-categories" aria-label="Направления поиска">
+   <a href="#map/" aria-current={!id?'page':undefined}>Все</a>
    {searchCategories.map(([value,label,Icon])=><a key={value} href={'#map/'+encodeURIComponent(value)} aria-current={id===value?'page':undefined}><Icon size={18} aria-hidden="true"/>{label}</a>)}
   </nav>}</>}
  {geoExplain&&<div className="finder-location-overlay" onKeyDown={e=>{if(e.key==='Escape'){setGeoExplain(false);setPendingGeoSearch('');}}}><section ref={geoPrompt} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="finder-location-title" className="finder-location-dialog"><div className="finder-location-icon"><MapPin size={25}/></div><h2 id="finder-location-title">Откуда искать?</h2><p>Геолокация помогает показать расстояние и начать маршрут от вас. Если город уже выбран, можно искать по всему городу.</p><button className="finder-location-allow" onClick={()=>locate(continuePendingSearch)}><MapPin size={17}/>Разрешить браузеру</button>{city&&<button className="finder-location-address" onClick={()=>{setGeoExplain(false);setManual(true);}}>Указать адрес вручную</button>}<button className="finder-location-skip" onClick={()=>continuePendingSearch()}>{city?'Продолжить по городу':'Выбрать город'}</button><button type="button" className="nearby-dialog-close" onClick={()=>{setGeoExplain(false);setPendingGeoSearch('');}}>Закрыть</button></section></div>}

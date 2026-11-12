@@ -21,7 +21,7 @@ export default function AccountShortcut({name}:{name?:string}){
   return()=>{controller.abort();window.removeEventListener('pageshow',refresh);};
  },[name]);
  const label=name??loadedName;
- return <a href="/account" className="account-shortcut" aria-label={label?'Аккаунт: '+label:'Аккаунт'}>
-  <CircleUserRound size={21} aria-hidden="true"/><span>{label||'Аккаунт'}</span>
+ return <a href="/account" className="account-shortcut" aria-label={label?'Аккаунт: '+label:'Войти'}>
+  <CircleUserRound size={21} aria-hidden="true"/><span>{label||'Войти'}</span>
  </a>;
 }
