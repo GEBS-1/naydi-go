@@ -73,3 +73,13 @@
 
 .finder .nearby-location .map-journey-toggle { padding: 9px 14px; border: 1px solid #bfd6ff; border-radius: 12px; color: #0959d7; background: #f0f6ff; }
 .finder .nearby-location .map-journey-toggle[aria-pressed=true] { color: #fff; background: #0866ff; border-color: #0866ff; }
+
+/* v3 layout keeps the live results and map side by side; the assistant opens on demand. */
+.map-assistant-entry{display:flex;justify-content:flex-end;margin:0 0 8px}
+.finder .map-assistant-entry button{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid #d8e3f9;border-radius:12px;background:#f2f5ff;color:#2857ac;font-weight:700}
+.search-assistant-backdrop{position:fixed;inset:0;z-index:79;border:0;background:#13254266}
+.finder .search-assistant{position:fixed;z-index:80;right:24px;bottom:24px;display:flex;width:min(410px,calc(100vw - 24px));height:min(630px,calc(100vh - 48px));min-height:0;padding:18px;border:1px solid #dce7f6;border-radius:22px;background:#fff;box-shadow:0 18px 55px #17325246}
+.finder .search-assistant-head>button{margin-left:auto;border:0;background:transparent;color:#426084;font-size:25px}
+@media(min-width:1200px){.finder .finder-results-grid.map-view:has(.search-assistant){grid-template-columns:minmax(330px,0.85fr) minmax(450px,1.15fr);gap:15px}.finder.finder-page-map{max-width:1240px;margin-inline:auto}.finder:has(.search-assistant){padding-top:0}}
+@media(max-width:1050px){.finder .finder-results-grid.map-view:has(.search-assistant){grid-template-columns:minmax(240px,0.85fr) minmax(300px,1.15fr)}}
+@media(max-width:760px){.finder .search-assistant{right:12px;bottom:calc(80px + env(safe-area-inset-bottom,0px));width:calc(100vw - 24px);height:min(580px,calc(100vh - 110px))}}

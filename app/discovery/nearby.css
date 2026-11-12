@@ -118,6 +118,7 @@
 @media(max-width:480px){.nearby-focus .finder-results-grid .search-hit.nearby-card.nearby-listing>div.nearby-card-image{flex-basis:88px;width:88px;min-width:88px;max-width:88px;height:88px}}
 
 .d-bottom.nearby-bottom{grid-template-columns:repeat(3,1fr)}
+@media(max-width:900px){.d-bottom.nearby-bottom.v3-mobile-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));justify-items:center}.d-bottom.nearby-bottom.v3-mobile-nav a{min-width:0}}
 
 /* Product photos, coordinated list selection and the selected seller's offers. */
 .nearby-focus .finder-results-grid .search-hit.nearby-card.nearby-product>div.nearby-card-image{flex:0 0 132px;width:132px;min-width:132px;max-width:132px;height:152px;background:#fff}
