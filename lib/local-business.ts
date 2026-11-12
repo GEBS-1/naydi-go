@@ -19,6 +19,10 @@ export function businessLocations(html:string,source:string,city:string):SearchH
   return [{id:'business:'+source+':'+street,kind:'store',title:text(node.name),description:'Адрес опубликован на странице организации. Наличие товара уточните у продавца.',category:'',city,address:street,point,phone:text(node.telephone)||null,site:safeHTTP(node.url)||source,sellerLinks:[node.sameAs].flat().flatMap(value=>safeHTTP(value)||[]),hours:text(node.openingHours)||null,source,checkedAt:new Date().toISOString(),price:null,image:safeHTTP(node.image)||null,status:'organization',distanceKm:null,locationSource:source,locationEvidence:point?'confirmed-point':undefined} satisfies SearchHit];
  });
  if(structured.length)return structured;
+ // A product page may repeat the company's contact address in its footer.
+ // That address does not identify the branch offering this particular item.
+ const path=new URL(source).pathname;
+ if(/\/(?:product|products|tovar|item|goods)\/[^/]+|\/(?:catalog|katalog)\/[^/]+\/[^/]+/iu.test(path))return [];
  // Many small offline shops publish contacts as ordinary text rather than schema.org.
  // Require the selected city immediately followed by a street and house number.
  const plain=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu,' ').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&(?:laquo|raquo|quot);/gi,'').replace(/\s+/gu,' ');

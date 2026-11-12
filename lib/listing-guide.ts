@@ -21,6 +21,14 @@ export function listingMissing(d:ListingDraft,step:number):string[]{
 }
 export function listingPrice(d:ListingDraft){return d.priceMode==='negotiable'?null:d.priceMode==='free'?0:Number(d.price);}
 export type ListingSuggestion={name?:string;description?:string;category?:string;condition?:'new'|'used';price?:number;priceMode?:'fixed'|'free'|'negotiable'};
+/** Copy only an explicitly named item from seller text when the model omits it. */
+export function explicitListingTitle(message:string):Pick<ListingSuggestion,'name'|'description'>{
+ const match=message.match(/(?:хочу\s+(?:разместить|продать)|продаю|составь\s+название\s+и\s+(?:короткое\s+)?описание\s*:)\s+([^.!?\n]+)/iu);
+ if(!match)return {};
+ const name=match[1].replace(/[,;]\s*(?:нов(?:ый|ая|ое|ые)|б\s*\/\s*у|цен[ауы]|за\s+\d)[\s\S]*$/iu,'').trim().slice(0,200);
+ if(name.length<3||name.length>120||/\b(?:помоги|сделай|добавь|не\s+публикуй)\b/iu.test(name))return {};
+ return {name,description:name.length>=10?name:undefined};
+}
 // Commercial facts come from explicit seller text, never model guesses.
 export function listingFacts(message:string):ListingSuggestion{
  const facts:ListingSuggestion={},text=message.toLowerCase();

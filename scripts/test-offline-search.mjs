@@ -32,6 +32,7 @@ assert.equal(businessLocations(markup,'https://seller.example/contacts','Сам�
 const contact='<title>Автокраски</title><p>г. Казань, ул. Родина, д.2а Корпус 5</p>';
 assert.equal(businessLocations(contact,'https://seller.example','Казань')[0].address,'ул. Родина, д.2а Корпус 5');
 assert.equal(businessLocations(contact,'https://seller.example','Самара').length,0);
+assert.equal(businessLocations(contact,'https://seller.example/product/paint-123','Казань').length,0,'Product footer address is not a confirmed selling point');
 assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Тестовая, 12'},'Казань','ул. Тестовая, 12'),true);
 assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Тестовая, 120'},'Казань','ул. Тестовая, 12'),false);
 assert.equal(exactAddressMatch({city:'Казань',label:'Казань, улица Николая Ершова 62Д к2'},'Казань','ул. Николая Ершова, 62Д, корп. 2'),true);

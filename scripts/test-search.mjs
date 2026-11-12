@@ -11,7 +11,7 @@ assert.equal(rankSearch(rows,'компресс')[0].id,'1');assert.equal(rankSea
 
 async function bundled(entry){const result=await build({entryPoints:[entry],bundle:true,write:false,platform:'node',format:'esm',target:'node22'});return import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));}
 const {webSearchPayload,WEB_SEARCH_PROMPT_VERSION}=await bundled('lib/web-search-prompt.ts');
-assert.equal(WEB_SEARCH_PROMPT_VERSION,'v25');
+assert.equal(WEB_SEARCH_PROMPT_VERSION,'v26');
 assert.deepEqual(webSearchPayload('карандаш для бровей','Казань',{lat:55.83004,lng:49.10006},'Дружба, улица Короленко'),{query:'карандаш для бровей',city:'Казань',buyerLocationApprox:{lat:55.83,lng:49.1},buyerArea:'Дружба, улица Короленко'});
 assert.deepEqual(webSearchPayload('дрель','Казань'),{query:'дрель',city:'Казань'},'coordinates are included only when the user granted a location');
 console.log('PASS: unified Perplexity request carries the selected query, city and permitted approximate location.');

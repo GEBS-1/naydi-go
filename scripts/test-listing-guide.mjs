@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 const result=await build({entryPoints:['lib/listing-guide.ts'],bundle:true,write:false,platform:'node',format:'esm'});
-const {listingFacts,listingMissing,listingPrice}=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
+const {explicitListingTitle,listingFacts,listingMissing,listingPrice}=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
+assert.deepEqual(explicitListingTitle('Хочу разместить набор цветных карандашей 12 цветов, новый. Цена 299 рублей.'),{name:'набор цветных карандашей 12 цветов',description:'набор цветных карандашей 12 цветов'});
+assert.deepEqual(explicitListingTitle('Помоги с карточкой'),{});
 for(const [message,expected] of [
  ['Продаю велосипед б/у за 5500 рублей',{condition:'used',price:5500,priceMode:'fixed'}],
  ['Новый велосипед за 5 тысяч',{condition:'new',price:5000,priceMode:'fixed'}],

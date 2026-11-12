@@ -1,7 +1,7 @@
 import type {GeoPoint} from './city-search';
 
 // Version this alongside the web cache so prompt changes can be measured.
-export const WEB_SEARCH_PROMPT_VERSION='v25';
+export const WEB_SEARCH_PROMPT_VERSION='v26';
 
 export const WEB_SEARCH_SYSTEM_PROMPT=`Ты ищешь реальные предложения для покупки товара в указанном городе России.
 Цель: вернуть прямые URL отдельных товарных карточек продавцов, а не страницы категорий, брендов, подборки, статьи или маркетинговый текст.

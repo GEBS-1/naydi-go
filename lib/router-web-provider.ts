@@ -17,6 +17,7 @@ import {cacheRead,cacheWrite} from './search-storage';
 import {WEB_SEARCH_PROMPT_VERSION,WEB_SEARCH_SYSTEM_PROMPT,webSearchPayload} from './web-search-prompt';
 import {businessLocations} from './local-business';
 import {locatePublishedBusinesses} from './web-places';
+import {externalSearch} from './discovery-server';
 function nearKey(near?:GeoPoint){return near?':'+near.lat.toFixed(2)+','+near.lng.toFixed(2):'';}
 function repairProductLinks(hits:SearchHit[]):SearchHit[]{return hits.map(hit=>{
  if(hit.kind!=='product'||!hit.site||!hit.source)return hit;
@@ -57,6 +58,12 @@ function baseProvider():BaseProvider|null{
   if(scope?.sources&&!scope.sources.some(merchant=>matchesMerchantSource(merchant,url)))continue;
   uniqueSources.set(url,{...source,url});
  }
+ // Sonar can complete without returning citation URLs. Use the configured
+ // search index to find actual pages, then apply the same source verification.
+ if(!uniqueSources.size&&env.BRAVE_SEARCH_API_KEY&&!scope?.sources){
+  const indexed=await externalSearch(query,city).catch(()=>[]);
+  for(const item of indexed){const url=safeHTTP(item.url);if(url)uniqueSources.set(url,{url,title:item.title,snippet:item.description});}
+ }
  const unique=productPageFirst([...uniqueSources.values()],city);
  const documents=await Promise.all(unique.slice(0,scope?.sources?4:6).map(async source=>({
   ...source,html:await fetchSource(source.url),
@@ -90,11 +97,9 @@ export function routerWebProvider():WebSearchProvider|null{
    const dominant=[...firstHosts][0];
    try{hits.push(...(await base.search(`${query} -site:${dominant}`,city,near,nearArea)).filter(hit=>new URL(hit.source).hostname.replace(/^www\./,'')!==dominant));}catch{/* Keep the first seller if a second source is unavailable. */}
   }
-  if(!hits.some(h=>h.kind==='product')&&!/аренд|прокат|напрокат/iu.test(query)&&performance.now()-started<8000){
-   const categoryHosts=[...new Set(hits.filter(h=>h.kind==='page').map(h=>new URL(h.source).hostname.replace(/^www\./,'')))].slice(0,2);
-   const exclusions=categoryHosts.map(host=>`-site:${host}`).join(' ');
-   try{hits.push(...await base.search(query,city,near,nearArea,{hint:`Найди прямые ссылки на конкретные предложения о продаже. Исключи каталоги без карточек и аренду. ${exclusions}`}));}catch{/* Keep the first source result if the retry fails. */}
-  }
+  // A second broad Sonar request often repeats the same category pages while
+  // doubling cost and latency. Keep the first verified response and let the
+  // buyer refine the query if it contains no concrete product pages.
   const useful=()=>hits.some(h=>h.kind==='product'&&h.price!==null&&(budget===undefined||h.price<=budget)&&h.sourceAvailability!=='out_of_stock');
   if(/подар|подобрать|посовет/iu.test(query)&&!useful()){
    try{for(const variant of await queryVariants(query,city)){hits.push(...await base.search(variant,city,near,nearArea));if(useful())break;}}catch{/* Keep already verified sources on model/budget/provider failure. */}
