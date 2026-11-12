@@ -16,8 +16,8 @@ function savedSellerName(shop:Shop|null,accountName:string){
 function profileFields(draft:ListingDraft,shop:Shop|null,accountName:string):ListingDraft{
  return {...draft,sellerName:draft.sellerName??savedSellerName(shop,accountName),sellerType:draft.sellerType||shop?.sellerType||(shop?'business':'private'),companyName:draft.companyName??(shop?.sellerType==='private'?'':shop?.name||'')};
 }
-export default function ListingEditor({initialShop,accountName}:{initialShop:Shop|null;accountName:string}){
- const [shop,setShop]=useState(initialShop),[products,setProducts]=useState<Product[]>([]),[draft,setDraft]=useState<ListingDraft>(()=>emptyDraft(initialShop,accountName)),[step,setStep]=useState(initialShop?0:1),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(false),[published,setPublished]=useState(false),[ready,setReady]=useState(false),[saveStatus,setSaveStatus]=useState('Открываем черновик…');
+export default function ListingEditor({initialShop,accountName,storeMode=false}:{initialShop:Shop|null;accountName:string;storeMode?:boolean}){
+ const [shop,setShop]=useState(initialShop),[products,setProducts]=useState<Product[]>([]),[draft,setDraft]=useState<ListingDraft>(()=>({...emptyDraft(initialShop,accountName),...(storeMode&&!initialShop?{sellerType:"business" as const}:{})})),[step,setStep]=useState(initialShop?0:1),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(false),[published,setPublished]=useState(false),[ready,setReady]=useState(false),[saveStatus,setSaveStatus]=useState('Открываем черновик…');
  const [focusField,setFocusField]=useState<string|null>(null);
  const [editingSeller,setEditingSeller]=useState(false);
  const [assistantEntry,setAssistantEntry]=useState({revision:0,open:false});
@@ -67,6 +67,21 @@ export default function ListingEditor({initialShop,accountName}:{initialShop:Sho
   setFocusField(field);
  }
  function another(){if((draft.name||draft.photos.length)&&!saved&&!window.confirm('Начать новое объявление? Текущий черновик будет заменён.'))return;setDraft(emptyDraft(shop,accountName));setAssistantEntry({revision:0,open:false});setEditingSeller(false);setConsent(false);setSaved(false);setStep(shop?0:1);setError('');}
+ useEffect(()=>{
+  const anchor=window.location.hash.slice(1);
+  if(anchor.startsWith('listing-'))document.getElementById(anchor)?.scrollIntoView({block:'start'});
+ },[products]);
+
+ const openedEdit=useRef(false);
+ useEffect(()=>{
+  if(!ready||openedEdit.current)return;
+  const id=new URLSearchParams(window.location.search).get('edit');
+  if(!id)return;
+  const product=products.find(item=>item.id===id);
+  if(!product)return;
+  openedEdit.current=true;
+  void edit(product);
+ },[ready,products]); // eslint-disable-line react-hooks/exhaustive-deps
  async function edit(product:Product,withAssistant=false){
   if(product.id!==draft.id||saved){
    if((draft.name||draft.photos.length)&&!saved&&!window.confirm('Открыть это объявление? Текущий черновик будет заменён.'))return;
@@ -119,10 +134,11 @@ export default function ListingEditor({initialShop,accountName}:{initialShop:Sho
  const sellerSaved=!!shop&&!editingSeller&&!listingMissing(draft,1).length;
  const steps=sellerSaved&&step!==1?[0,2]:[1,0,2];
  const previousStep=steps[steps.indexOf(step)-1];
+ const stepLabels=storeMode?["Товары","Адрес и контакты","Предпросмотр"]:listingSteps;
  const editing=products.some(p=>p.id===draft.id);
  return <main className="business-demo marketplace-flow design listing-editor unified-seller">
  <header><a href="/"><ArrowLeft size={18}/>Найти рядом</a><a href="/">НайдиGo</a><a href="/messages">Сообщения</a><a href="#my-listings">Мои объявления{products.length?' · '+products.length:''}</a><AccountShortcut name={accountName}/></header>
- <section className="unified-intro"><div><p className="business-kicker">ТОВАРЫ РЯДОМ · ЛЮДИ И МАГАЗИНЫ</p><h1>{saved?(published?'Объявление опубликовано':'Объявление отправлено'):editing?'Изменить объявление':'Разместить объявление'}</h1><p>{saved?(published?'Товар доступен покупателям в поиске и на карте.':'Всё сохранено. После проверки товар появится в поиске и на карте.'):'Фото → готовая карточка → покупатель рядом. Один процесс для личных вещей и товаров магазина.'}</p></div><div className="unified-mini-map" aria-hidden="true"><span className="map-path"/><MapPin className="map-pin-one"/><Store className="map-pin-two"/><Package className="map-pin-three"/><small>Покупатели рядом</small></div></section>
+ <section className="unified-intro"><div><p className="business-kicker">ТОВАРЫ РЯДОМ · ЛЮДИ И МАГАЗИНЫ</p><h1>{saved?(published?'Объявление опубликовано':'Объявление отправлено'):editing?'Изменить объявление':storeMode?'Подключение магазина':'Разместить объявление'}</h1><p>{saved?(published?'Товар доступен покупателям в поиске и на карте.':'Всё сохранено. После проверки товар появится в поиске и на карте.'):storeMode?'Добавьте магазин в НайдиGo, чтобы покупатели находили ваши товары рядом.':'Фото → готовая карточка → покупатель рядом.'}</p></div><div className="unified-mini-map" aria-hidden="true"><span className="map-path"/><MapPin className="map-pin-one"/><Store className="map-pin-two"/><Package className="map-pin-three"/><small>Покупатели рядом</small></div></section>
  <section className="business-step">
  {error&&<p role="alert">{error}</p>}
  {saved?<div className="unified-saved"><Check size={32}/><h2>{published?'Карточка в поиске':'Карточка на проверке'}</h2><p>Статус можно посмотреть ниже, в своих объявлениях.</p><button className="d-btn" type="button" onClick={another}><Plus size={16}/>Добавить ещё товар</button></div>:!ready?<button className="d-btn secondary" type="button" onClick={()=>void loadDraft()}>Открыть сохранённый черновик</button>:<>
@@ -132,9 +148,41 @@ export default function ListingEditor({initialShop,accountName}:{initialShop:Sho
  <button type="button" className="d-btn secondary" onClick={()=>goToField('seller-name',1)}>Изменить продавца и место</button>
  {shop?.sellerType==='private'&&draft.sellerType!=='business'&&<button type="button" className="d-btn secondary" onClick={createShop}><Store size={16}/>Создать магазин</button>}
  </div>}
- <nav className="listing-steps" style={{gridTemplateColumns:`repeat(${steps.length}, minmax(0, 1fr))`}} aria-label="Шаги объявления">{steps.map((i,index)=><button type="button" key={i} aria-current={step===i?'step':undefined} className={step===i?'active':''} disabled={busy} onClick={()=>setStep(i)}><span>{i<2&&!listingMissing(draft,i).length?<Check size={15}/>:index+1}</span>{listingSteps[i]}</button>)}</nav>
- <form onSubmit={e=>void submit(e)} className="listing-form" noValidate><fieldset className="unified-form-fields" disabled={busy}><h2 id="listing-step-fields">{listingSteps[step]}</h2>
+ <nav className="listing-steps" style={{gridTemplateColumns:`repeat(${steps.length}, minmax(0, 1fr))`}} aria-label={storeMode?"Шаги подключения магазина":"Шаги объявления"}>{steps.map((i,index)=><button type="button" key={i} aria-current={step===i?'step':undefined} className={step===i?'active':''} disabled={busy} onClick={()=>setStep(i)}><span>{i<2&&!listingMissing(draft,i).length?<Check size={15}/>:index+1}</span>{stepLabels[i]}</button>)}</nav>
+ {storeMode&&step===0&&<div className="store-assortment-workspace">
+ <aside className="store-assortment-details" aria-labelledby="store-details-title">
+  <h2 id="store-details-title"><Store size={20}/> Данные магазина</h2>
+  {shop?.photos?.[0]&&<img src={shop.photos[0]} alt="Фото магазина"/>}
+  <strong>{draft.companyName?.trim()||'Название ещё не указано'}</strong>
+  <p>{[draft.city,draft.street].filter(Boolean).join(' · ')||'Адрес ещё не указан'}</p>
+  <p>{draft.phone||'Телефон ещё не указан'}</p>
+  <button className="d-btn secondary" type="button" onClick={()=>goToField('company',1)}><Pencil size={16}/> Изменить данные магазина</button>
+ </aside>
+ <section className="store-assortment" aria-labelledby="store-assortment-title">
+  <div className="store-assortment-heading">
+   <h2 id="store-assortment-title">Ассортимент магазина</h2>
+   {shop?.sellerType==='business'&&<a href="/#products"><FileText size={16}/> Импорт CSV/XLSX</a>}
+  </div>
+  {products.length>0?<div className="store-assortment-scroll"><table>
+   <thead><tr><th scope="col">Товар</th><th scope="col">Цена</th><th scope="col">Остаток</th><th scope="col">Статус</th><th scope="col">Действия</th></tr></thead>
+   <tbody>{products.map(product=><tr key={product.id}>
+    <th scope="row"><span>{product.photos[0]?<img src={product.photos[0]} alt="" loading="lazy"/>:<Package size={20}/>} {product.name}</span></th>
+    <td>{product.price==null?'Уточнить':money(product.price)}</td>
+    <td>{product.quantity??'Не указан'}</td>
+    <td>{product.quantity===0?'Снят с продажи':product.published&&shop?.visibility==='public'?'В поиске':'На проверке'}</td>
+    <td><button type="button" className="d-btn secondary" disabled={busy} onClick={()=>void edit(product)} aria-label={'Редактировать '+product.name}><Pencil size={16}/></button></td>
+   </tr>)}</tbody>
+  </table></div>:<p>Здесь появятся добавленные товары. Заполните первую карточку ниже.</p>}
+ </section></div>}
+ <form onSubmit={e=>void submit(e)} className="listing-form" noValidate><fieldset className={step===0?"unified-form-fields with-live-preview":"unified-form-fields"} disabled={busy}><h2 id="listing-step-fields">{stepLabels[step]}</h2>
  <ListingAssistant key={draft.id+":"+assistantEntry.revision} initiallyOpen={assistantEntry.open} editing={editing} draft={draft} step={step} disabled={busy||uploading} onApply={applySuggestion}/>
+ {step===0&&<aside className="listing-live-preview" aria-labelledby="listing-live-preview-title">
+  <h3 id="listing-live-preview-title">Ваш товар</h3>
+  {draft.photos[0]?<img src={draft.photos[0]} alt="Основное фото товара"/>:<div className="listing-live-preview-empty"><Camera size={24}/> Фото ещё нет</div>}
+  <strong>{draft.name.trim()||'Название товара'}</strong>
+  <p>{displayPrice}</p>
+  <dl><div><dt>Категория</dt><dd>{draft.category}</dd></div><div><dt>Описание</dt><dd>{draft.description.trim()?'Добавлено':'Не заполнено'}</dd></div><div><dt>Фотографии</dt><dd>{draft.photos.length}</dd></div></dl>
+ </aside>}
  {step===0&&<>
  <p>Добавьте фото, затем укажите название, состояние, цену и описание товара.</p>
  <label className="unified-photo-picker"><Camera size={28}/><b>Добавьте фотографии товара</b><small>До 5 фото · JPG, PNG, WebP · до 5 МБ</small><input id="listing-photos" aria-label="Фотографии товара" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploading||draft.photos.length>=5||busy} onChange={e=>void upload(e.target.files)}/></label>
@@ -189,7 +237,7 @@ export default function ListingEditor({initialShop,accountName}:{initialShop:Sho
  </section>
  <section className="listing-mine unified-my" id="my-listings"><div className="unified-section-heading"><h2>Мои объявления{products.length?' · '+products.length:''}</h2>{saved&&<button className="d-btn secondary" type="button" onClick={another}><Plus size={16}/>Добавить товар</button>}</div>{stockNotice&&<p className="unified-stock-notice" role="status">{stockNotice}</p>}
  <SellerStats key={saved?'submitted':'editing'}/>
- {!products.length?<div className="unified-empty"><Package size={32}/><p>Здесь появятся ваши товары и их статусы. Начните с первого фото выше.</p></div>:<div className="unified-products">{products.map(p=><article key={p.id}><div className="unified-product-image">{p.photos[0]?<img src={p.photos[0]} alt={p.name}/>:<Package size={32}/>}</div><div className="unified-product-body"><small className={'unified-status '+(p.quantity===0?'inactive':p.published&&shop?.visibility==='public'?'public':'pending')}>{p.quantity===0?'Снято с продажи':p.published&&shop?.visibility==='public'?'В поиске':'На проверке'}</small><h3>{p.name}</h3><strong>{p.priceMode==='free'?'Бесплатно':p.price===null?'Договорная':money(p.price)}</strong><p>{p.condition==='used'?'Б/у':p.condition==='new'?'Новый':'Состояние не указано'}</p><p><MapPin size={14}/>{shop?.city}, {shop?.street}</p>{p.quantity!==0&&<form className="unified-stock-edit" onSubmit={e=>{e.preventDefault();const value=Number(new FormData(e.currentTarget).get('quantity'));void updateStock(p,value);}}><label>Остаток <input key={p.id+':'+p.quantity} name="quantity" type="number" min="0" max="10000000" step="1" required defaultValue={p.quantity??''} placeholder="Не указан" aria-label={`Остаток: ${p.name}`}/></label><button type="submit" disabled={busy}>Сохранить</button></form>}<div className="unified-product-actions"><a href="/messages">Сообщения покупателей</a><button type="button" disabled={busy} onClick={()=>void edit(p)}><Pencil size={14}/>Изменить</button><button type="button" disabled={busy||uploading||!ready} onClick={()=>void edit(p,true)}><Sparkles size={14}/>Изменить с помощником</button>{shop&&<a href={route(shop)} target="_blank" rel="noreferrer"><Navigation size={14}/>Маршрут</a>}{p.quantity!==0&&<button type="button" disabled={busy} onClick={()=>void withdraw(p)}>Снять с продажи</button>}</div></div></article>)}</div>}
+ {!products.length?<div className="unified-empty"><Package size={32}/><p>Здесь появятся ваши товары и их статусы. Начните с первого фото выше.</p></div>:<div className="unified-products">{products.map(p=><article key={p.id} id={'listing-'+encodeURIComponent(p.id)}><div className="unified-product-image">{p.photos[0]?<img src={p.photos[0]} alt={p.name}/>:<Package size={32}/>}</div><div className="unified-product-body"><small className={'unified-status '+(p.quantity===0?'inactive':p.published&&shop?.visibility==='public'?'public':'pending')}>{p.quantity===0?'Снято с продажи':p.published&&shop?.visibility==='public'?'В поиске':'На проверке'}</small><h3>{p.name}</h3><strong>{p.priceMode==='free'?'Бесплатно':p.price===null?'Договорная':money(p.price)}</strong><p>{p.condition==='used'?'Б/у':p.condition==='new'?'Новый':'Состояние не указано'}</p><p><MapPin size={14}/>{shop?.city}, {shop?.street}</p>{p.quantity!==0&&<form className="unified-stock-edit" onSubmit={e=>{e.preventDefault();const value=Number(new FormData(e.currentTarget).get('quantity'));void updateStock(p,value);}}><label>Остаток <input key={p.id+':'+p.quantity} name="quantity" type="number" min="0" max="10000000" step="1" required defaultValue={p.quantity??''} placeholder="Не указан" aria-label={`Остаток: ${p.name}`}/></label><button type="submit" disabled={busy}>Сохранить</button></form>}<div className="unified-product-actions"><a href="/messages">Сообщения покупателей</a><button type="button" disabled={busy} onClick={()=>void edit(p)}><Pencil size={14}/>Изменить</button><button type="button" disabled={busy||uploading||!ready} onClick={()=>void edit(p,true)}><Sparkles size={14}/>Изменить с помощником</button>{shop&&<a href={route(shop)} target="_blank" rel="noreferrer"><Navigation size={14}/>Маршрут</a>}{p.quantity!==0&&<button type="button" disabled={busy} onClick={()=>void withdraw(p)}>Снять с продажи</button>}</div></div></article>)}</div>}
  </section>
  </main>;
 }

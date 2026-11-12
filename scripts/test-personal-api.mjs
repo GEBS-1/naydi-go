@@ -19,7 +19,11 @@ const item={id:'product:fixture',title:'Тестовая карточка',kind:
 const personal={version:1,favorites:[item],searches:[],history:[],collections:[]};
 assert.equal((await api.GET(request('GET',null,''))).status,401);
 const created=await api.POST(request('POST',personal));assert.equal(created.status,200);assert.equal((await created.json()).version,1);
-const changed=await api.PUT(request('PUT',{version:1,data:{...personal,favorites:[]}}));assert.equal(changed.status,200);assert.equal((await changed.json()).version,2);
+const withRoute={...item,address:'Казань, улица Декабристов, 160',destination:{lat:55.83,lng:49.08}};
+const saved=await api.PUT(request('PUT',{version:1,data:{...personal,favorites:[item, {...withRoute,id:'product:with-route'}]}}));
+assert.equal(saved.status,200);
+assert.deepEqual((await (await api.GET(request('GET'))).json()).data.favorites,[item,{...withRoute,id:'product:with-route'}]);
+const changed=await api.PUT(request('PUT',{version:2,data:{...personal,favorites:[]}}));assert.equal(changed.status,200);assert.equal((await changed.json()).version,3);
 const read=await api.GET(request('GET'));assert.deepEqual((await read.json()).data.favorites,[]);
 assert.equal((await api.PUT(request('PUT',{version:1,data:personal}))).status,409);
 console.log('PASS: authenticated personal data merge, removal, read and version conflict.');

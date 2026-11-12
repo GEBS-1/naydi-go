@@ -19,3 +19,19 @@
 .reference-home .home-search-steps{margin-top:8px}
 @media(max-width:800px){.finder .reference-home.home-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"intro" "categories" "note" "steps" "examples" "map" "help" "history" !important;gap:16px}.reference-home .home-search-intro{min-height:0;margin:-25px -18px 0;padding:35px 18px 30px;background:linear-gradient(180deg,#f8fbff,#e4eeff)}.reference-home.city-kazan .home-search-intro{background:linear-gradient(180deg,#f8fbfff5 0%,#f8fbffe8 60%,#f8fbff96),url('/hero-kazan-v2.png') 65% center/cover}.reference-home.home-layout h1{font-size:39px}.reference-home .finder-search{min-height:60px}.reference-home .finder-search .finder-primary{min-width:75px}.home-category-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.finder .home-category-row button{min-height:92px;font-size:12px;border-radius:16px}.home-perplexity-note{display:grid;gap:8px;padding:18px}.home-perplexity-note strong{font-size:17px}.home-benefits{gap:10px 14px;font-size:11px}.home-benefits span{width:calc(50% - 10px)}}
 @media(max-width:480px){.reference-home .home-search-intro{width:calc(100% + 36px)}.reference-home.home-layout h1{font-size:35px}.reference-home .nearby-lead{font-size:15px}.reference-home .finder-search textarea{font-size:14px}.reference-home .finder-search .finder-primary{min-width:58px;padding:7px}.reference-home .finder-search .finder-primary svg{display:none}}
+
+@media (min-width: 1200px) {
+ .ng-app:has(.reference-home) .d-header { padding-inline: 44px; }
+ .d-main:has(.reference-home) { max-width: none; padding-inline: 0; }
+ .finder .reference-home.home-layout { width: min(1480px, calc(100% - 96px)); margin-inline: auto; gap: 18px 22px; }
+ .reference-home .home-search-intro { padding: 30px 12px 18px; min-height: 0; }
+ .reference-home.home-layout h1 { max-width: 750px; margin-top: 12px; font-size: clamp(43px, 3.4vw, 56px); }
+ .reference-home .home-guide-search { max-width: none; }
+ .finder .home-category-row button { min-height: 94px; }
+}
+
+.home-inline-camera { display: none; }
+@media (min-width: 1200px) {
+ .home-inline-camera { display: grid; place-items: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: #0866ff; border-radius: 12px; }
+ .home-inline-camera:hover { background: #edf4ff; }
+}
