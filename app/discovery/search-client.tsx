@@ -3,7 +3,7 @@ import {trackProductEvent} from '@/lib/product-events';
 import {explicitCityCandidate} from '@/lib/location-context';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {ChevronDown,Search,MapPin,Car,House,Laptop,Dumbbell,Leaf,PawPrint,Navigation,Camera,ShieldCheck,Zap,Layers3,LayoutGrid,Sparkles} from 'lucide-react';
+import {ChevronDown,Search,MapPin,Navigation,Camera,ShieldCheck,Zap,Layers3,Sparkles} from 'lucide-react';
 import {type Product,type Shop} from '@/lib/model';
 import {parseIntent,mapHitShop,safeHTTP,hasConfirmedLocation,routeHit} from '@/lib/city-search';
 import type {PublicSearchResponse as SearchResponse} from '@/lib/search-details';
@@ -33,10 +33,6 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  const searchPage=page==='home'||page==='browse'?page:'results';
  const replaying=useRef(false);const [filtersOpen,setFiltersOpen]=useState(false);
  const [selectedHit,setSelectedHit]=useState('');
- const [assistantQuery,setAssistantQuery]=useState('');
- const [assistantOpen,setAssistantOpen]=useState(false);
- useEffect(()=>{const open=()=>setAssistantOpen(true);window.addEventListener('ng-open-search-assistant',open);if(page==='map'){try{if(sessionStorage.getItem('ng_open_search_assistant')==='1'){sessionStorage.removeItem('ng_open_search_assistant');setAssistantOpen(true);}}catch{}}else setAssistantOpen(false);return()=>window.removeEventListener('ng-open-search-assistant',open);},[page]);
- useEffect(()=>{if(!assistantOpen)return;const close=(event:KeyboardEvent)=>{if(event.key==='Escape')setAssistantOpen(false);};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[assistantOpen]);
  const browseReturn=useRef('#home'),browseDraft=useRef(''),previousPage=useRef(page);
  const [shown,setShown]=useState(10);const manualCity=useRef(false);
  useEffect(()=>{setShown(10);setSelectedHit('');},[id,filter,city]);
@@ -83,7 +79,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
    setNote('');
   }else void run(id);
  }return()=>controller.current?.abort();},[searchPage,id,city,near,ready,locationRestored]);
- function begin(q:string){const text=q.trim();if(!text)return;const resolved=resolveSearch(text,context.current);setQuery(text);setFilter('all');setJourney(false);if(parseIntent(resolved.query,city).journey){setJourney(true);setQuery(resolved.query);}const target=(page==='map'?'map/':'search/')+encodeURIComponent(text);if(location.hash.slice(1)===target)void run(text);else location.hash=target;}
+ function begin(q:string){const text=q.trim();if(!text)return;try{sessionStorage.setItem('ng_last_search_query',text);}catch{}const resolved=resolveSearch(text,context.current);setQuery(text);setFilter('all');setJourney(false);if(parseIntent(resolved.query,city).journey){setJourney(true);setQuery(resolved.query);}const target=(page==='map'?'map/':'search/')+encodeURIComponent(text);if(location.hash.slice(1)===target)void run(text);else location.hash=target;}
  function continuePendingSearch(resolvedCity?:string){
   setGeoExplain(false);
   if(!city&&!resolvedCity){setCityEdit(true);return;}
@@ -155,7 +151,6 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  const selectedShopId=mappedSelection?mapHitShop(mappedSelection,addressHits).id:undefined;
  function selectHit(id:string,scroll=false){const index=addressHits.findIndex(h=>h.id===id);if(index<0)return;setSelectedHit(id);setShown(n=>Math.max(n,index+1));if(scroll)window.setTimeout(()=>document.getElementById('search-hit-'+id)?.scrollIntoView({behavior:'smooth',block:'nearest'}),80);}
  function selectShop(id:string){const linked=mappableHits.filter(h=>mapHitShop(h,addressHits).id===id);const target=linked.find(h=>h.kind==='product')||linked[0];if(target)selectHit(target.id,true);}
- const searchCategories=[['Автотовары','Авто и запчасти',Car],['Дом и ремонт','Дом и ремонт',House],['Электроника','Электроника',Laptop],['Спорт и хобби','Спорт и отдых',Dumbbell],['Сад и дача','Сад и огород',Leaf],['Зоотовары','Зоотовары',PawPrint]] as const;
  const popularQueries=['Свечи Denso для RAV4','Замена масла','Ремонт телефона','Велосипед','Корм для собак','Шины 225/65 R17'];
  const searchBox=<VoiceSearch placeholder={page==='home'?'Что вы ищете? Например: свечи Denso для RAV4, ремонт телефона, шиномонтаж...':undefined} photoControl={page==="home"?<label className="home-inline-camera" htmlFor="home-search-image" title="Найти по фото"><Camera size={22} aria-hidden="true"/><span className="sr-only">Найти по фото</span></label>:undefined} value={query} onChange={setQuery} busy={false} onSearch={text=>submit(text??query)}/>;
  const cityButton=<button type="button" className="finder-header-city" aria-label={`Текущий город: ${city||'не выбран'}. Изменить город`} onClick={()=>setCityEdit(true)}><MapPin size={17}/><span>{city||'Выбрать город'}</span><ChevronDown size={15}/></button>;
@@ -172,20 +167,13 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
    <div className="home-guide-search">{searchBox}</div>
    <div className="home-photo-search"><PhotoSearch inputId="home-search-image" onQuery={text=>{setQuery(text);void submit(text);}}/></div>
   </section>
-  <section className="home-category-row" aria-label="Направления поиска">
-   {(searchCategories).map(([value,label,Icon])=><button type="button" key={value} onClick={()=>void submit(value)}><Icon size={27} aria-hidden="true"/><span>{label}</span></button>)}
-   <button type="button" onClick={()=>{location.hash='map/';}}><LayoutGrid size={27} aria-hidden="true"/><span>Все категории</span></button>
-  </section>
   <section className="home-perplexity-card" aria-labelledby="home-perplexity-title">
    <div className="home-perplexity-copy"><Sparkles size={18} aria-hidden="true"/><div><strong id="home-perplexity-title">Помощник НайдиGo</strong><p>Опишите задачу своими словами. Поиск соберёт подходящие предложения и покажет точки на карте.</p></div></div>
-   <a className="home-assistant-open" href="#map/" onClick={()=>{try{sessionStorage.setItem('ng_open_search_assistant','1');}catch{}setAssistantOpen(true);}}>Открыть помощника</a>
+   <button type="button" className="home-assistant-open" onClick={()=>window.dispatchEvent(new Event('ng-open-site-helper'))}>Открыть помощника</button>
   </section>
   <HomeListingFeed city={city} near={near||null}/>
   <section className="home-popular" aria-labelledby="home-popular-title"><h2 id="home-popular-title">Примеры запросов{city?` для города ${city}`:''}</h2><div>{popularQueries.map(item=><button type="button" key={item} onClick={()=>void submit(item)}><Search size={15} aria-hidden="true"/>{item}</button>)}</div></section>
- </div>:page==='browse'?<><a className="listing-map-back" href={browseReturn.current}>← Назад к поиску</a>{locationControl}</>:<>{searchBox}{locationControl} {page==='map'&&<nav className="map-search-categories" aria-label="Направления поиска">
-   <a href="#map/" aria-current={!id?'page':undefined}>Все</a>
-   {searchCategories.map(([value,label,Icon])=><a key={value} href={'#map/'+encodeURIComponent(value)} aria-current={id===value?'page':undefined}><Icon size={18} aria-hidden="true"/>{label}</a>)}
-  </nav>}</>}
+ </div>:page==='browse'?<><a className="listing-map-back" href={browseReturn.current}>← Назад к поиску</a>{locationControl}</>:<>{searchBox}{locationControl}</>}
  {geoExplain&&<div className="finder-location-overlay" onKeyDown={e=>{if(e.key==='Escape'){setGeoExplain(false);setPendingGeoSearch('');}}}><section ref={geoPrompt} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="finder-location-title" className="finder-location-dialog"><div className="finder-location-icon"><MapPin size={25}/></div><h2 id="finder-location-title">Откуда искать?</h2><p>Геолокация помогает показать расстояние и начать маршрут от вас. Если город уже выбран, можно искать по всему городу.</p><button className="finder-location-allow" onClick={()=>locate(continuePendingSearch)}><MapPin size={17}/>Разрешить браузеру</button>{city&&<button className="finder-location-address" onClick={()=>{setGeoExplain(false);setManual(true);}}>Указать адрес вручную</button>}<button className="finder-location-skip" onClick={()=>continuePendingSearch()}>{city?'Продолжить по городу':'Выбрать город'}</button><button type="button" className="nearby-dialog-close" onClick={()=>{setGeoExplain(false);setPendingGeoSearch('');}}>Закрыть</button></section></div>}
  {manual&&<Address city={city} label="Откуда искать — адрес" value={null} onChange={p=>{if(p){setNear(p);setManual(false);setNote('');if(pendingGeoSearch)continuePendingSearch();}}}/>}
  {note&&/(?:не получено|недоступн|не удалось|Запрашиваем|сохранён)/iu.test(note)&&<p className="nearby-status" role="status">{note}</p>}
@@ -193,7 +181,6 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
  {page==='browse'&&<ListingMap city={city} near={near} onChooseCity={()=>setCityEdit(true)} onRequestLocation={()=>setGeoExplain(true)}/>}
  {searchPage==='results'&&<>
  <div className="nearby-toolbar"><div className="nearby-result-count">{busy?'Ищем рядом…':stores.length?`${stores.length} ${pointWord(stores.length)} на карте`:'Подтверждённых точек пока нет'}</div><div className="nearby-view"><button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)}>Фильтры</button><a aria-current={page!=='map'?'page':undefined} href={'#search/'+encodeURIComponent(id)}>Список</a><a aria-current={page==='map'?'page':undefined} href={'#map/'+encodeURIComponent(id)}>Карта</a></div></div>
- {page==='map'&&<div className="map-assistant-entry"><button type="button" onClick={()=>setAssistantOpen(true)}><Sparkles size={17}/>Помощник НайдиGo</button></div>}
  {page==='map'&&!journey&&<div className="map-source-filters" role="group" aria-label="Фильтры предложений на карте">
   {([['all','Все'],['seller','От продавцов'],['web','Из интернета'],['service','Услуги']] as const).map(([value,label])=><button type="button" key={value} aria-pressed={filter===value} onClick={()=>setFilter(value)}>{label} <span>{allHits.filter(hit=>matchesFilter(hit,value)).length}</span></button>)}
  </div>}
@@ -212,7 +199,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
   {unlocatedProducts.slice(0,shown).map(h=><ResultCard key={h.id} hit={h} near={near}/>)}
  </div>}
  {(addressHits.length>shown||unlocatedProducts.length>shown)&&<button className="nearby-more" onClick={()=>setShown(n=>n+10)}>Ещё результаты</button>}
- {!busy&&!mappableHits.length&&<div className="nearby-empty"><Search size={25}/>
+ {!busy&&!!data&&!mappableHits.length&&<div className="nearby-empty"><Search size={25}/>
   <h2>{productQuery?(unlocatedProducts.length?'Адрес покупки пока не подтверждён':'Конкретный товар пока не найден'):internetHits.length?'Пока не нашли адрес рядом':'Пока ничего не нашли'}</h2>
   <p>{productQuery?(unlocatedProducts.length?'Откройте предложение, чтобы уточнить адрес у продавца.':'Можно уточнить название или модель. Магазины для уточнения и найденные ссылки показаны отдельно.'):'Попробуйте другое название или укажите, где искать.'}</p>
  </div>}
@@ -222,7 +209,7 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
   <p>На этих страницах не удалось выделить конкретное предложение.</p>
   <ul className="nearby-source-links">{sourceLinks.slice(0,shown).map(h=>{const url=safeHTTP(h.site)||safeHTTP(h.source);return url?<li key={h.id}><a href={url} target="_blank" rel="noreferrer">{h.title}</a></li>:null;})}</ul>
  </details>}
- </div><aside><OffersMap compact productSearch={productQuery} stores={stores} offers={[]} linkedProducts={linkedProducts} selectedId={selectedShopId} selectedHitId={selectedHit} onSelect={selectShop} onSelectHit={id=>selectHit(id,true)} near={near} onRequestLocation={()=>setGeoExplain(true)}/></aside>{page==='map'&&assistantOpen&&<><button type="button" className="search-assistant-backdrop" aria-label="Закрыть помощника" onClick={()=>setAssistantOpen(false)}/><section className="search-assistant" role="dialog" aria-label="Помощник по поиску"><div className="search-assistant-head"><span aria-hidden="true">✦</span><div><strong>Помощник НайдиGo</strong><small>Уточните, что вам нужно</small></div><button type="button" aria-label="Закрыть помощника" onClick={()=>setAssistantOpen(false)}>×</button></div><p>Опишите товар или задачу своими словами. Я обновлю карточки и точки по вашему запросу.</p><div className="search-assistant-actions"><button type="button" onClick={()=>setGeoExplain(true)}>Найти ближе ко мне</button><button type="button" onClick={()=>setAssistantQuery(query+' рядом')}>Уточнить запрос</button><button type="button" onClick={()=>setJourney(true)}>Найти по дороге</button><a href="/business-demo">Подключить магазин</a><a href="/sell">Разместить товар</a></div><form onSubmit={e=>{e.preventDefault();setAssistantOpen(false);void submit(assistantQuery);}}><label htmlFor="search-assistant-query">Ваш запрос</label><textarea id="search-assistant-query" value={assistantQuery} onChange={e=>setAssistantQuery(e.target.value)} rows={3} maxLength={500} placeholder="Например: свечной ключ 16 мм рядом"/><button type="submit" disabled={!assistantQuery.trim()}>Найти предложения</button></form></section></>}</div>
+ </div><aside><OffersMap compact productSearch={productQuery} stores={stores} offers={[]} linkedProducts={linkedProducts} selectedId={selectedShopId} selectedHitId={selectedHit} onSelect={selectShop} onSelectHit={id=>selectHit(id,true)} near={near} onRequestLocation={()=>setGeoExplain(true)}/></aside></div>
  </>}
  </>}
  </div>;

@@ -8,6 +8,8 @@
 .unified-seller .seller-primary-header .v3-desktop-nav a:last-child{margin-left:0}
 .unified-seller .seller-primary-header>a:last-child{margin-left:0}
 @media(max-width:1180px){.v3-desktop-nav{gap:0}.ng-app .reference-header .v3-desktop-nav{gap:0}.v3-desktop-nav a{font-size:12px;padding:8px}}
-@media(max-width:950px){.v3-desktop-nav,.ng-app .reference-header .v3-desktop-nav{display:none}}
-@media(max-width:900px){.d-bottom.nearby-bottom.v3-mobile-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));justify-items:center}.d-bottom.nearby-bottom.v3-mobile-nav a{min-width:0;font-size:10px;white-space:nowrap}}
-@media(max-width:900px){.unified-seller,.chat-page{padding-bottom:88px}}
+@media(max-width:1000px){.ng-app .reference-header{gap:8px;padding-inline:14px}.ng-app .reference-header .d-brand{font-size:22px}.ng-app .reference-header .v3-desktop-nav{gap:0}.v3-desktop-nav a{font-size:12px;padding:8px 6px}.ng-app .reference-header .header-tools{gap:3px}}
+@media(min-width:691px) and (max-width:900px){.ng-app .reference-header .v3-desktop-nav,.chat-top .v3-desktop-nav{display:flex!important}}
+@media(max-width:690px){.v3-desktop-nav,.ng-app .reference-header .v3-desktop-nav{display:none!important}}
+@media(min-width:691px){.d-bottom.nearby-bottom.v3-mobile-nav{display:none!important}}
+@media(max-width:690px){.d-bottom.nearby-bottom.v3-mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));justify-items:center}.d-bottom.nearby-bottom.v3-mobile-nav a{min-width:0;font-size:10px;white-space:nowrap}.unified-seller,.chat-page{padding-bottom:88px}}

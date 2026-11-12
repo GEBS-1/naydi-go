@@ -27,7 +27,7 @@ export default function ListingAssistant({draft,step,onApply,disabled=false,init
  {mode==='choice'?<>
  <p>Здравствуйте! Помочь составить объявление? Можете заполнить форму сами или рассказать мне о товаре.</p>
  <div className="listing-assistant-actions">
- <button className="d-btn" type="button" onClick={()=>setMode('chat')}>Составить с помощником</button>
+ <button className="d-btn listing-assistant-start" type="button" onClick={()=>setMode('chat')}>Составить с помощником</button>
  <button className="d-btn secondary" type="button" onClick={()=>setMode('manual')}>Заполнить вручную</button>
  </div>
  </>:<>

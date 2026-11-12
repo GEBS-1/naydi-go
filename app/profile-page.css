@@ -12,6 +12,15 @@
 .profile-sidebar a small{margin-left:auto;color:#075bfb;font-weight:750}
 .profile-sidebar a em{margin-left:auto;padding:2px 7px;border-radius:99px;background:#e8f8ee;color:#178a45;font-style:normal;font-size:11px;font-weight:750}
 
+@media(max-width:690px){
+ .profile-summary{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center}
+ .profile-summary>a{grid-column:1/-1;text-align:center;justify-self:stretch}
+ .profile-summary h1{overflow-wrap:anywhere}
+ .profile-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .profile-shortcuts a{min-width:0;min-height:64px;overflow-wrap:normal;word-break:normal;line-height:1.25}
+ .profile-shortcuts svg{flex:none}
+}
+
 
 @media (min-width: 1200px) {
  .ng-app:has(.profile-layout) .d-header { height: 68px; padding-inline: 30px; }

@@ -1,4 +1,4 @@
-@media (max-width:900px){
+@media (max-width:690px){
   html{scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   .ng-app{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .ng-app>.d-header,.ng-app>.ng-banner{flex-shrink:0}

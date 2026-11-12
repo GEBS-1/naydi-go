@@ -1,7 +1,7 @@
 'use client';
 import AccountShortcut from './account/account-shortcut';
 import {lazy,Suspense,useEffect,useState} from 'react';
-import {MapPin,Heart,Bell} from 'lucide-react';
+import {MapPin} from 'lucide-react';
 import SearchClient from './discovery/search-client';
 import PrimarySiteNav from './primary-site-nav';
 import {availability,money,type Product,type Shop} from '@/lib/model';
@@ -24,11 +24,11 @@ export default function BuyerApp({children}:{children?:React.ReactNode}){
  if(!buyerPages.has(page))return <Suspense fallback={<Loading/>}><CatalogApp/></Suspense>;
  const content=page==='history'?<Suspense fallback={<Loading/>}><SearchHistory/></Suspense>:page==='favorites'?<Suspense fallback={<Loading/>}><FavoritesPage/></Suspense>:page==='my'?<Suspense fallback={<Loading/>}><ProfilePage/></Suspense>:<SearchClient page={page} id={id} card={(product,shop)=><CompactProduct product={product} shop={shop}/>}/>;
  const home=page==='home',profile=page==='my';
- const current=home?'Главная':page==='map'||page==='browse'?'Карта':profile?'Профиль':undefined;
+ const current=home||page==='map'||page==='browse'||page==='search'?'Поиск':profile?'Профиль':page==='favorites'?'Избранное':undefined;
  return <div className="design ng-app"><header className={'d-header reference-header v3-header'+(home?' reference-header-home':profile?' reference-header-profile':' reference-header-app')}>
   <a className="d-brand" href="#home"><MapPin strokeWidth={3}/><span>Найди<span>Go</span></span></a>
   <PrimarySiteNav current={current}/>
-  <div className="header-tools"><div id="buyer-city-slot" className="d-city-slot"/><a className="header-fav" href="#favorites" aria-label="Избранное"><Heart size={18}/></a><a className="header-bell" href="/messages" aria-label="Уведомления"><Bell size={18}/></a><AccountShortcut/></div>
+  <div className="header-tools"><div id="buyer-city-slot" className="d-city-slot"/><AccountShortcut/></div>
  </header><main className="d-main">{content}{home&&children}</main><PrimarySiteNav current={current} mobile/></div>;
 }
 function Loading(){return <div className="ng-empty"><h1>Загружаем раздел…</h1></div>}
