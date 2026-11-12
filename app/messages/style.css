@@ -3,3 +3,5 @@
 
 .chat-demo{padding:12px 16px;border:1px dashed #ccd9e9;border-radius:12px;margin-bottom:18px;color:#617890;font-size:12px}.chat-demo p{margin:10px 0;max-width:700px}.chat-demo button{margin:8px 10px 0 0;border:1px solid #cddced;border-radius:8px;background:white;color:#1265ef;padding:9px 12px}
 .chat-agent-draft{padding:12px;margin-bottom:14px;background:#f0f6ff;border:1px solid #dbe9ff;border-radius:12px}.chat-agent-draft>div{display:flex;gap:8px;margin:8px 0}.chat-agent-draft input{min-width:0;flex:1;border:1px solid #d7e2ef;border-radius:10px;padding:10px;color:#203b56}.chat-agent-draft small{color:#647b96;font-size:11px}.chat-agent-draft button{white-space:nowrap}@media(max-width:720px){.chat-agent-draft>div{flex-direction:column}}
+.chat-top{align-items:center}.chat-top .chat-brand{color:#152443;font-size:24px;font-weight:850;white-space:nowrap}.chat-brand svg,.chat-brand span{color:#0967f6}.chat-top .v3-desktop-nav{margin-left:auto}
+@media(max-width:900px){.chat-page{padding-bottom:90px}.chat-top .v3-desktop-nav{display:none}}

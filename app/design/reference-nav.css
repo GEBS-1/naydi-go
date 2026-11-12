@@ -19,14 +19,10 @@
 .reference-header-profile .account-shortcut{width:40px;height:40px;padding:0;justify-content:center;border-radius:999px}
 .reference-header-profile .account-shortcut span{display:none}
 .ng-app .v3-header{gap:20px}
-.ng-app .v3-desktop-nav{display:flex;align-items:center;gap:4px;margin-left:auto}
-.ng-app .v3-desktop-nav a{display:inline-flex;align-items:center;gap:6px;padding:9px 11px;border-radius:12px;color:#526581;font-size:13px;font-weight:700;white-space:nowrap}
-.ng-app .v3-desktop-nav a:hover,.ng-app .v3-desktop-nav a[aria-current="page"]{background:#eef4ff;color:#075bfb}
 .v3-header .header-tools{margin-left:0;gap:8px}
 .v3-header .header-fav,.v3-header .header-bell{display:grid;place-items:center;width:38px;height:38px;border-radius:12px}
 .v3-header .header-fav{font-size:0}
-@media(max-width:1180px){.ng-app .v3-desktop-nav{gap:0}.ng-app .v3-desktop-nav a{font-size:12px;padding:8px}.v3-header .header-fav{display:none}}
-@media(max-width:950px){.ng-app .v3-desktop-nav{display:none}.v3-header .header-fav{display:grid}}
-@media(max-width:900px){.ng-app .v3-mobile-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0}.ng-app .v3-mobile-nav a{min-width:0;font-size:10px;white-space:nowrap}.ng-app .v3-mobile-nav a.active{color:#075bfb}}
+@media(max-width:1180px){.v3-header .header-fav{display:none}}
+@media(max-width:950px){.v3-header .header-fav{display:grid}}
 @media(max-width:1150px){.ng-app .reference-header nav{gap:8px;font-size:13px}.reference-header .header-fav span{display:none}}
 @media(max-width:900px){.ng-app .reference-header nav{display:none}.reference-header .header-tools{gap:6px}}

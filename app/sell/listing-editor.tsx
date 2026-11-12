@@ -1,7 +1,8 @@
 'use client';
 import AccountShortcut from '../account/account-shortcut';
+import PrimarySiteNav from '../primary-site-nav';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
-import {MapPin,Plus,ArrowLeft,Check,Camera,Package,Store,Pencil,Sparkles,Navigation,FileText} from 'lucide-react';
+import {MapPin,Plus,Check,Camera,Package,Store,Pencil,Sparkles,Navigation,FileText} from 'lucide-react';
 import {money,route,type Product,type Shop} from '@/lib/model';
 import {listingSteps,listingMissing,listingIssues,listingPrice,type ListingDraft,type ListingSuggestion} from '@/lib/listing-guide';
 import ListingAssistant from './listing-assistant';
@@ -137,7 +138,7 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  const stepLabels=storeMode?["Товары","Адрес и контакты","Предпросмотр"]:listingSteps;
  const editing=products.some(p=>p.id===draft.id);
  return <main className="business-demo marketplace-flow design listing-editor unified-seller">
- <header><a href="/"><ArrowLeft size={18}/>Найти рядом</a><a href="/">НайдиGo</a><a href="/messages">Сообщения</a><a href="#my-listings">Мои объявления{products.length?' · '+products.length:''}</a><AccountShortcut name={accountName}/></header>
+ <header className="seller-primary-header"><a className="seller-primary-brand" href="/">Найди<span>Go</span></a><PrimarySiteNav current="Разместить"/><AccountShortcut name={accountName}/></header>
  <section className="unified-intro"><div><p className="business-kicker">ТОВАРЫ РЯДОМ · ЛЮДИ И МАГАЗИНЫ</p><h1>{saved?(published?'Объявление опубликовано':'Объявление отправлено'):editing?'Изменить объявление':storeMode?'Подключение магазина':'Разместить объявление'}</h1><p>{saved?(published?'Товар доступен покупателям в поиске и на карте.':'Всё сохранено. После проверки товар появится в поиске и на карте.'):storeMode?'Добавьте магазин в НайдиGo, чтобы покупатели находили ваши товары рядом.':'Фото → готовая карточка → покупатель рядом.'}</p></div><div className="unified-mini-map" aria-hidden="true"><span className="map-path"/><MapPin className="map-pin-one"/><Store className="map-pin-two"/><Package className="map-pin-three"/><small>Покупатели рядом</small></div></section>
  <section className="business-step">
  {error&&<p role="alert">{error}</p>}
@@ -239,5 +240,6 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  <SellerStats key={saved?'submitted':'editing'}/>
  {!products.length?<div className="unified-empty"><Package size={32}/><p>Здесь появятся ваши товары и их статусы. Начните с первого фото выше.</p></div>:<div className="unified-products">{products.map(p=><article key={p.id} id={'listing-'+encodeURIComponent(p.id)}><div className="unified-product-image">{p.photos[0]?<img src={p.photos[0]} alt={p.name}/>:<Package size={32}/>}</div><div className="unified-product-body"><small className={'unified-status '+(p.quantity===0?'inactive':p.published&&shop?.visibility==='public'?'public':'pending')}>{p.quantity===0?'Снято с продажи':p.published&&shop?.visibility==='public'?'В поиске':'На проверке'}</small><h3>{p.name}</h3><strong>{p.priceMode==='free'?'Бесплатно':p.price===null?'Договорная':money(p.price)}</strong><p>{p.condition==='used'?'Б/у':p.condition==='new'?'Новый':'Состояние не указано'}</p><p><MapPin size={14}/>{shop?.city}, {shop?.street}</p>{p.quantity!==0&&<form className="unified-stock-edit" onSubmit={e=>{e.preventDefault();const value=Number(new FormData(e.currentTarget).get('quantity'));void updateStock(p,value);}}><label>Остаток <input key={p.id+':'+p.quantity} name="quantity" type="number" min="0" max="10000000" step="1" required defaultValue={p.quantity??''} placeholder="Не указан" aria-label={`Остаток: ${p.name}`}/></label><button type="submit" disabled={busy}>Сохранить</button></form>}<div className="unified-product-actions"><a href="/messages">Сообщения покупателей</a><button type="button" disabled={busy} onClick={()=>void edit(p)}><Pencil size={14}/>Изменить</button><button type="button" disabled={busy||uploading||!ready} onClick={()=>void edit(p,true)}><Sparkles size={14}/>Изменить с помощником</button>{shop&&<a href={route(shop)} target="_blank" rel="noreferrer"><Navigation size={14}/>Маршрут</a>}{p.quantity!==0&&<button type="button" disabled={busy} onClick={()=>void withdraw(p)}>Снять с продажи</button>}</div></div></article>)}</div>}
  </section>
+ <PrimarySiteNav current="Разместить" mobile/>
  </main>;
 }

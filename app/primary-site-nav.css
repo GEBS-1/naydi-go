@@ -1,0 +1,13 @@
+.v3-desktop-nav{display:flex;align-items:center;gap:4px;margin-left:auto}
+.ng-app .reference-header .v3-desktop-nav{display:flex;gap:4px}
+.v3-desktop-nav a{display:inline-flex;align-items:center;gap:6px;padding:9px 11px;border-radius:12px;color:#526581;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+.v3-desktop-nav a:hover,.v3-desktop-nav a[aria-current="page"]{background:#eef4ff;color:#075bfb}
+.seller-primary-header .seller-primary-brand,.chat-top .chat-brand{font-size:22px;font-weight:850;color:#10264b;text-decoration:none;white-space:nowrap}
+.seller-primary-header .seller-primary-brand span,.chat-top .chat-brand span{color:#0866ff}
+.unified-seller .seller-primary-header .v3-desktop-nav{margin-left:auto}
+.unified-seller .seller-primary-header .v3-desktop-nav a:last-child{margin-left:0}
+.unified-seller .seller-primary-header>a:last-child{margin-left:0}
+@media(max-width:1180px){.v3-desktop-nav{gap:0}.ng-app .reference-header .v3-desktop-nav{gap:0}.v3-desktop-nav a{font-size:12px;padding:8px}}
+@media(max-width:950px){.v3-desktop-nav,.ng-app .reference-header .v3-desktop-nav{display:none}}
+@media(max-width:900px){.d-bottom.nearby-bottom.v3-mobile-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));justify-items:center}.d-bottom.nearby-bottom.v3-mobile-nav a{min-width:0;font-size:10px;white-space:nowrap}}
+@media(max-width:900px){.unified-seller,.chat-page{padding-bottom:88px}}
