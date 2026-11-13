@@ -17,7 +17,7 @@ function profileFields(draft:ListingDraft,shop:Shop|null,accountName:string):Lis
  return {...draft,sellerName:draft.sellerName??savedSellerName(shop,accountName),sellerType:draft.sellerType||shop?.sellerType||(shop?'business':'private'),companyName:draft.companyName??(shop?.sellerType==='private'?'':shop?.name||'')};
 }
 export default function ListingEditor({initialShop,accountName,storeMode=false}:{initialShop:Shop|null;accountName:string;storeMode?:boolean}){
- const [shop,setShop]=useState(initialShop),[products,setProducts]=useState<Product[]>([]),[draft,setDraft]=useState<ListingDraft>(()=>({...emptyDraft(initialShop,accountName),...(storeMode&&!initialShop?{sellerType:"business" as const}:{})})),[step,setStep]=useState(initialShop?0:1),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(false),[published,setPublished]=useState(false),[ready,setReady]=useState(false),[saveStatus,setSaveStatus]=useState('Открываем черновик…');
+ const [shop,setShop]=useState(initialShop),[products,setProducts]=useState<Product[]>([]),[draft,setDraft]=useState<ListingDraft>(()=>({...emptyDraft(initialShop,accountName),...(storeMode&&!initialShop?{sellerType:"business" as const}:{})})),[step,setStep]=useState(storeMode&&!initialShop?1:0),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(false),[published,setPublished]=useState(false),[ready,setReady]=useState(false),[saveStatus,setSaveStatus]=useState('Открываем черновик…');
  const [focusField,setFocusField]=useState<string|null>(null);
  const [editingSeller,setEditingSeller]=useState(false);
  const [assistantEntry,setAssistantEntry]=useState({revision:0,open:false});
@@ -33,7 +33,7 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  const version=useRef(0),lastSaved=useRef(''),queue=useRef<Promise<boolean>>(Promise.resolve(true)),conflict=useRef(false),publishing=useRef(false);
  function update(patch:Partial<ListingDraft>){setDraft(d=>({...d,...patch}));setConsent(false);setError('');}
  async function restore(storeId:string){const r=await fetch('/api/connect?draft='+encodeURIComponent(storeId),{cache:'no-store'});if(!r.ok)throw Error('Не удалось открыть объявления.');const b=await r.json() as {shop:Shop;products:Product[]};setShop(b.shop);setProducts(b.products);return b.shop;}
- async function loadDraft(){setReady(false);setError('');try{const r=await fetch('/api/listings/draft',{cache:'no-store'}),b=await r.json() as {draft:ListingDraft|null;version:number;error?:string};if(!r.ok)throw Error(b.error||'Не удалось открыть черновик.');version.current=b.version;conflict.current=false;setHasConflict(false);if(b.draft){const restored=profileFields(b.draft,shop,accountName);setDraft(restored);lastSaved.current=JSON.stringify(restored);setStep(!shop?1:[1,0].find(s=>listingMissing(restored,s).length)??2);setSaveStatus('Черновик восстановлен из аккаунта');}else{let next=emptyDraft(shop,accountName);try{const anchor=JSON.parse(sessionStorage.getItem('ng_search_anchor')||'null');if(!next.city&&typeof anchor?.city==='string'&&Date.now()-anchor.at<1800000)next={...next,city:anchor.city};}catch{}setDraft(next);setStep(shop&&!listingMissing(next,1).length?0:1);lastSaved.current='';setSaveStatus('Изменения сохраняются в аккаунте');}setReady(true);}catch(e){setError((e as Error).message);setSaveStatus('Черновик не открыт');}}
+ async function loadDraft(){setReady(false);setError('');try{const r=await fetch('/api/listings/draft',{cache:'no-store'}),b=await r.json() as {draft:ListingDraft|null;version:number;error?:string};if(!r.ok)throw Error(b.error||'Не удалось открыть черновик.');version.current=b.version;conflict.current=false;setHasConflict(false);if(b.draft){const restored=profileFields(b.draft,shop,accountName);setDraft(restored);lastSaved.current=JSON.stringify(restored);setStep(!shop&&!storeMode?([0,1].find(s=>listingMissing(restored,s).length)??2):!shop?1:([1,0].find(s=>listingMissing(restored,s).length)??2));setSaveStatus('Черновик восстановлен из аккаунта');}else{let next=emptyDraft(shop,accountName);try{const anchor=JSON.parse(sessionStorage.getItem('ng_search_anchor')||'null');if(!next.city&&typeof anchor?.city==='string'&&Date.now()-anchor.at<1800000)next={...next,city:anchor.city};}catch{}setDraft(next);setStep(storeMode&&!shop?1:0);lastSaved.current='';setSaveStatus('Изменения сохраняются в аккаунте');}setReady(true);}catch(e){setError((e as Error).message);setSaveStatus('Черновик не открыт');}}
  useEffect(()=>{void loadDraft();if(initialShop)void restore(initialShop.id).catch(e=>setError((e as Error).message));},[initialShop]); // eslint-disable-line react-hooks/exhaustive-deps
  function persist(next:ListingDraft){const serialized=JSON.stringify(next);queue.current=queue.current.then(async()=>{if(conflict.current)return false;if(serialized===lastSaved.current)return true;setSaveStatus('Сохраняем черновик…');try{const r=await fetch('/api/listings/draft',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({draft:next,version:version.current})}),b=await r.json() as {version:number;error?:string};if(!r.ok){if(r.status===409){conflict.current=true;setHasConflict(true);}throw Error(b.error||'Не удалось сохранить черновик.');}version.current=b.version;lastSaved.current=serialized;setSaveStatus('Черновик сохранён в аккаунте');return true;}catch(e){setSaveStatus((e as Error).message);return false;}});return queue.current;}
  useEffect(()=>{if(!ready||saved||publishing.current)return;const timer=setTimeout(()=>{if(!publishing.current)void persist(draft);},1000);return()=>clearTimeout(timer);},[draft,ready,saved]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -66,7 +66,7 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
   setStep(targetStep);
   setFocusField(field);
  }
- function another(){if((draft.name||draft.photos.length)&&!saved&&!window.confirm('Начать новое объявление? Текущий черновик будет заменён.'))return;setDraft(emptyDraft(shop,accountName));setAssistantEntry({revision:0,open:false});setEditingSeller(false);setConsent(false);setSaved(false);setStep(shop?0:1);setError('');}
+ function another(){if((draft.name||draft.photos.length)&&!saved&&!window.confirm('Начать новое объявление? Текущий черновик будет заменён.'))return;setDraft(emptyDraft(shop,accountName));setAssistantEntry({revision:0,open:false});setEditingSeller(false);setConsent(false);setSaved(false);setStep(storeMode&&!shop?1:0);setError('');}
  useEffect(()=>{
   const anchor=window.location.hash.slice(1);
   if(anchor.startsWith('listing-'))document.getElementById(anchor)?.scrollIntoView({block:'start'});
@@ -122,17 +122,13 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
    finally{setBusy(false);}
   }
   setEditingSeller(false);
-  setStep(0);
- }
- function createShop(){
-  update({sellerType:'business'});
-  goToField('company',1);
+  setStep(listingMissing(draft,0).length?0:2);
  }
  function applySuggestion(p:ListingSuggestion){const {price,...fields}=p;update({...fields,...(price!==undefined?{price:String(price)}:{})});}
  const addressText=draft.street.split(',').some(p=>p.trim().toLocaleLowerCase()===draft.city.trim().toLocaleLowerCase())?draft.street:[draft.city,draft.street||'Место пока не выбрано'].join(', ');
  const missing=listingIssues(draft,step),allMissing=listingMissing(draft,2),displayPrice=draft.priceMode==='negotiable'?'Цена договорная':draft.priceMode==='free'?'Отдам бесплатно':money(draft.price===''?null:Number(draft.price));
  const sellerSaved=!!shop&&!editingSeller&&!listingMissing(draft,1).length;
- const steps=sellerSaved&&step!==1?[0,2]:[1,0,2];
+ const steps=sellerSaved&&step!==1?[0,2]:storeMode?[1,0,2]:[0,1,2];
  const previousStep=steps[steps.indexOf(step)-1];
  const stepLabels=storeMode?["Товары","Адрес и контакты","Предпросмотр"]:listingSteps;
  const editing=products.some(p=>p.id===draft.id);
@@ -146,7 +142,6 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  {hasConflict&&<button className="d-btn secondary" onClick={()=>void loadDraft()}>Открыть актуальный черновик</button>}
  {sellerSaved&&step!==1&&<div className="listing-assistant-actions">
  <button type="button" className="d-btn secondary" onClick={()=>goToField('seller-name',1)}>Изменить продавца и место</button>
- {shop?.sellerType==='private'&&draft.sellerType!=='business'&&<button type="button" className="d-btn secondary" onClick={createShop}><Store size={16}/>Создать магазин</button>}
  </div>}
  <nav className="listing-steps" style={{gridTemplateColumns:`repeat(${steps.length}, minmax(0, 1fr))`}} aria-label={storeMode?"Шаги подключения магазина":"Шаги объявления"}>{steps.map((i,index)=><button type="button" key={i} aria-current={step===i?'step':undefined} className={step===i?'active':''} disabled={busy} onClick={()=>setStep(i)}><span>{i<2&&!listingMissing(draft,i).length?<Check size={15}/>:index+1}</span>{stepLabels[i]}</button>)}</nav>
  {storeMode&&step===0&&<div className="store-assortment-workspace">
@@ -206,7 +201,7 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  {draft.sellerType==='business'?<>
  <label>Название магазина или компании <small>Обязательно</small><input id="listing-company" maxLength={200} minLength={2} value={draft.companyName||''} onChange={e=>update({companyName:e.target.value})} placeholder="Как вас увидят покупатели"/></label>
  {shop?.sellerType!=='business'&&<button className="d-btn secondary" type="button" onClick={()=>update({sellerType:'private'})}>Размещаю как частный продавец</button>}
- </>:<button className="d-btn secondary" type="button" onClick={createShop}><Store size={16}/>Создать магазин</button>}
+ </>:<p className="d-fine">Вы размещаете объявление от своего имени. Витрину можно оформить позже.</p>}
  </div>
  <SellerLocation draft={draft} onChange={update}/>
  <p className="d-fine">В аккаунте одна точка для всех объявлений. Можно выбрать магазин или общедоступное место встречи. Контакт станет доступен после публикации.</p>
@@ -229,8 +224,8 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  </div>}
  <div className="listing-wizard-actions">
  {previousStep!==undefined&&<button className="d-btn secondary" type="button" onClick={()=>setStep(previousStep)}>Назад</button>}
- {step===1?<button className="d-btn" type="button" disabled={!!missing.length||uploading} onClick={()=>void continueFromSeller()}>{!shop?'Сохранить и перейти к товару':'Далее: Товар и цена'}</button>:
- step===0?<button className="d-btn" type="button" disabled={!!missing.length||uploading} onClick={()=>{setStep(2);setError('');}}>Далее: Проверка</button>:
+ {step===1?<button className="d-btn" type="button" disabled={!!missing.length||uploading} onClick={()=>void continueFromSeller()}>{listingMissing(draft,0).length?'Сохранить и перейти к товару':'Далее: Проверка'}</button>:
+ step===0?<button className="d-btn" type="button" disabled={!!missing.length||uploading} onClick={()=>{setStep(sellerSaved?2:1);setError('');}}>{sellerSaved?'Далее: Проверка':'Далее: Место и продавец'}</button>:
  <button className="d-btn" type="submit" disabled={busy||uploading||!!allMissing.length||!consent||hasConflict}>{busy?'Проверяем и сохраняем…':editing?'Сохранить изменения':'Проверить и опубликовать'}</button>}
  </div>
  </fieldset></form></>}

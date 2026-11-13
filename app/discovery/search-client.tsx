@@ -97,6 +97,14 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
    setNote('Не удалось подтвердить город из запроса. Выберите город вручную.');setCityEdit(true);return;
   }
   if(!city){setPendingGeoSearch(text);setGeoExplain(true);return;}
+  if(!near&&!manualCity.current&&navigator.permissions?.query){
+   let asked=false;try{asked=sessionStorage.getItem('ng_geo_prompt_seen')==='1';}catch{}
+   if(!asked){
+    try{const permission=await navigator.permissions.query({name:'geolocation'});
+     if(permission.state==='prompt'){try{sessionStorage.setItem('ng_geo_prompt_seen','1');}catch{}setPendingGeoSearch(text);setGeoExplain(true);return;}
+    }catch{}
+   }
+  }
   begin(text);
  }
  function locate(after?:(resolvedCity?:string)=>void){
@@ -120,7 +128,26 @@ export default function SearchClient({page,id,card}:{page:string;id:string;card:
    if(version===geoRev.current)void geoCity({lat:position.coords.latitude,lng:position.coords.longitude},version,after);
   },fail,{timeout:5500,maximumAge:60000});
  }
- useEffect(()=>{if(!ready||restoredGeo.current)return;restoredGeo.current=true;setLocationRestored(true);try{const saved=JSON.parse(sessionStorage.getItem('ng_search_anchor')||'null');if(saved&&Date.now()-saved.at<30*60*1000&&(!city||cityKey(saved.city)===cityKey(city))&&Number.isFinite(saved.point?.lat)&&Number.isFinite(saved.point?.lng)){setNear(saved.point);if(!city)setCity(saved.city);}}catch{}},[ready,city]);
+ useEffect(()=>{if(!ready||restoredGeo.current)return;restoredGeo.current=true;
+  let savedPoint:{lat:number;lng:number}|undefined;
+  try{const saved=JSON.parse(sessionStorage.getItem('ng_search_anchor')||'null');if(saved&&Date.now()-saved.at<30*60*1000&&(!city||cityKey(saved.city)===cityKey(city))&&Number.isFinite(saved.point?.lat)&&Number.isFinite(saved.point?.lng)){savedPoint=saved.point;setNear(saved.point);if(!city)setCity(saved.city);}}catch{}
+  // A previously granted browser permission can refresh the search origin without another prompt.
+  // Wait before starting a result search so a new position never triggers a second paid search.
+  if(manualCity.current||!navigator.geolocation||!navigator.permissions?.query){setLocationRestored(true);return;}
+  void navigator.permissions.query({name:'geolocation'}).then(permission=>{
+   if(permission.state!=='granted'){setLocationRestored(true);return;}
+   const version=++geoRev.current;let done=false;
+   const finish=()=>{if(done)return;done=true;setLocationRestored(true);};
+   const timeout=window.setTimeout(finish,6000);
+   navigator.geolocation.getCurrentPosition(position=>{
+    window.clearTimeout(timeout);
+    if(version!==geoRev.current){finish();return;}
+    const point={lat:position.coords.latitude,lng:position.coords.longitude};
+    if(savedPoint&&Math.abs(savedPoint.lat-point.lat)<0.001&&Math.abs(savedPoint.lng-point.lng)<0.001){finish();return;}
+    void geoCity(point,version).finally(finish);
+   },()=>{window.clearTimeout(timeout);finish();},{timeout:5500,maximumAge:60000});
+  }).catch(()=>setLocationRestored(true));
+ },[ready,city]);
  useEffect(()=>{if(near&&city)try{sessionStorage.setItem('ng_search_anchor',JSON.stringify({point:near,city,at:Date.now()}));}catch{}},[near,city]);
  const allHits=data?.hits||[];
  const matchesFilter=(hit:(typeof allHits)[number],value:string)=>value==='all'||(value==='seller'?hit.status==='seller-confirmed':value==='web'?hit.status==='website':hit.kind===value);
