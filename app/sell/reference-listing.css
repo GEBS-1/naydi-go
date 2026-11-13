@@ -64,3 +64,9 @@
  .listing-editor .unified-form-fields.with-live-preview { padding-right: 570px; }
  .listing-editor .with-live-preview > .listing-live-preview { position: absolute; top: 54px; right: 320px; width: 230px; }
 }
+.listing-editor .unified-form-fields,.listing-editor .unified-form-fields.with-live-preview{max-width:760px;min-height:0;margin:0 auto;padding-right:0}
+.listing-editor .unified-form-fields>.listing-assistant{position:static;width:auto;max-height:none;overflow:visible;margin:14px 0 24px}
+.listing-field-heading{margin:24px 0 10px;padding-top:18px;border-top:1px solid #e4ebf4;color:#142b4c;font-size:17px}
+.listing-mine-summary{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.listing-mine-summary span{display:flex;align-items:baseline;gap:7px;min-width:130px;padding:13px 17px;border:1px solid #dce7f6;border-radius:13px;background:#fff;color:#52677f}.listing-mine-summary b{font-size:23px;color:#075bfb}
+.listing-editor .unified-products{grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr))}.listing-editor .unified-products>article{max-width:560px}.listing-editor .unified-product-image{height:210px}.listing-editor .unified-product-image img{object-fit:contain;background:#f3f7fc}.listing-editor .unified-product-actions{gap:12px}.listing-editor .unified-product-actions button,.listing-editor .unified-product-actions a{padding:7px 9px;border:1px solid #d9e6f8;border-radius:8px;background:#f7faff}
+@media(max-width:760px){.listing-editor .unified-form-fields{max-width:none}.listing-mine-summary span{flex:1 1 100px;min-width:0;padding:10px}.listing-mine-summary b{font-size:19px}}

@@ -25,9 +25,8 @@ export default function BuyerApp({children}:{children?:React.ReactNode}){
  const home=page==='home',profile=page==='my';
  const current=home||page==='map'||page==='browse'||page==='search'?'Поиск':profile?'Профиль':page==='favorites'?'Избранное':undefined;
  return <div className="design ng-app"><header className={'d-header reference-header v3-header'+(home?' reference-header-home':profile?' reference-header-profile':' reference-header-app')}>
-  <a className="d-brand" href="#home"><MapPin strokeWidth={3}/><span>Найди<span>Go</span></span></a>
+  <div className="header-brand-location"><a className="d-brand" href="#home"><MapPin strokeWidth={3}/><span>Найди<span>Go</span></span></a><div id="buyer-city-slot" className="d-city-slot"/></div>
   <PrimarySiteNav current={current}/>
-  <div className="header-tools"><div id="buyer-city-slot" className="d-city-slot"/></div>
  </header><main className="d-main">{content}{home&&children}</main><PrimarySiteNav current={current} mobile/></div>;
 }
 function Loading(){return <div className="ng-empty"><h1>Загружаем раздел…</h1></div>}

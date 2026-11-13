@@ -132,6 +132,8 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  const previousStep=steps[steps.indexOf(step)-1];
  const stepLabels=storeMode?["Товары","Адрес и контакты","Предпросмотр"]:listingSteps;
  const editing=products.some(p=>p.id===draft.id);
+ const publicCount=products.filter(p=>p.published&&p.quantity!==0&&shop?.visibility==='public').length;
+ const reviewCount=products.filter(p=>p.published&&p.quantity!==0&&shop?.visibility!=='public').length;
  return <main className="business-demo marketplace-flow design listing-editor unified-seller">
  <header className="seller-primary-header"><a className="seller-primary-brand" href="/">Найди<span>Go</span></a><PrimarySiteNav current="Разместить"/></header>
  <section className="unified-intro"><div><p className="business-kicker">ТОВАРЫ РЯДОМ · ЛЮДИ И МАГАЗИНЫ</p><h1>{saved?(published?'Объявление опубликовано':'Объявление отправлено'):editing?'Изменить объявление':storeMode?'Подключение магазина':'Разместить объявление'}</h1><p>{saved?(published?'Товар доступен покупателям в поиске и на карте.':'Всё сохранено. После проверки товар появится в поиске и на карте.'):storeMode?'Добавьте магазин в НайдиGo, чтобы покупатели находили ваши товары рядом.':'Фото → готовая карточка → покупатель рядом.'}</p></div><div className="unified-mini-map" aria-hidden="true"><span className="map-path"/><MapPin className="map-pin-one"/><Store className="map-pin-two"/><Package className="map-pin-three"/><small>Покупатели рядом</small></div></section>
@@ -171,25 +173,22 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  </section></div>}
  <form onSubmit={e=>void submit(e)} className="listing-form" noValidate><fieldset className={step===0?"unified-form-fields with-live-preview":"unified-form-fields"} disabled={busy}><h2 id="listing-step-fields">{stepLabels[step]}</h2>
  <ListingAssistant key={draft.id+":"+assistantEntry.revision} initiallyOpen={assistantEntry.open} editing={editing} draft={draft} step={step} disabled={busy||uploading} onApply={applySuggestion}/>
- {step===0&&<aside className="listing-live-preview" aria-labelledby="listing-live-preview-title">
-  <h3 id="listing-live-preview-title">Ваш товар</h3>
-  {draft.photos[0]?<img src={draft.photos[0]} alt="Основное фото товара"/>:<div className="listing-live-preview-empty"><Camera size={24}/> Фото ещё нет</div>}
-  <strong>{draft.name.trim()||'Название товара'}</strong>
-  <p>{displayPrice}</p>
-  <dl><div><dt>Категория</dt><dd>{draft.category}</dd></div><div><dt>Описание</dt><dd>{draft.description.trim()?'Добавлено':'Не заполнено'}</dd></div><div><dt>Фотографии</dt><dd>{draft.photos.length}</dd></div></dl>
- </aside>}
  {step===0&&<>
- <p>Добавьте фото, затем укажите название, состояние, цену и описание товара.</p>
+ <p>Три шага: расскажите о товаре → укажите место передачи → проверьте готовую карточку.</p>
+ <h3 className="listing-field-heading">1. Фотографии</h3>
  <label className="unified-photo-picker"><Camera size={28}/><b>Добавьте фотографии товара</b><small>До 5 фото · JPG, PNG, WebP · до 5 МБ</small><input id="listing-photos" aria-label="Фотографии товара" type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploading||draft.photos.length>=5||busy} onChange={e=>void upload(e.target.files)}/></label>
  {uploading&&<p role="status">Загружаем фотографии…</p>}
  <div className="listing-photos">{draft.photos.map(src=><div key={src}><img src={src} alt="Фото объявления"/><button type="button" aria-label="Удалить фото" disabled={busy} onClick={()=>update({photos:draft.photos.filter(p=>p!==src)})}>×</button></div>)}</div>
  </>}
  {step===0&&<>
+ <h3 className="listing-field-heading">2. Что продаёте</h3>
  <label>Название товара <small>Обязательно</small><input id="listing-name" minLength={3} maxLength={200} value={draft.name} onChange={e=>update({name:e.target.value})} placeholder="Например: детский велосипед"/></label>
+ <label>Категория <small>Помогает найти объявление</small><input id="listing-category" maxLength={100} value={draft.category} onChange={e=>update({category:e.target.value})} placeholder="Например: Велосипеды"/></label>
+ <h3 className="listing-field-heading">3. Состояние и цена</h3>
  <div className="unified-field-pair"><label>Состояние <small>Обязательно</small><select id="listing-condition" value={draft.condition} onChange={e=>update({condition:e.target.value as ListingDraft['condition']})}><option value="">Выберите состояние</option><option value="used">Б/у</option><option value="new">Новый</option></select></label>
  <label>Цена, ₽ <small>{draft.priceMode==='fixed'?'Обязательно':'Сумма не требуется'}</small><input id="listing-price" type="number" min="0" max="1000000000" step="0.01" disabled={draft.priceMode!=='fixed'} value={draft.priceMode==='free'?'0':draft.priceMode==='negotiable'?'':draft.price} onChange={e=>update({price:e.target.value})} placeholder="Укажите цену"/></label></div>
  <fieldset className="listing-price-options"><legend>Вариант цены</legend>{(['fixed','negotiable','free'] as const).map(mode=><label key={mode}><input type="radio" name="priceMode" checked={draft.priceMode===mode} onChange={()=>update({priceMode:mode})}/>{mode==='fixed'?'Укажу цену':mode==='negotiable'?'Цена договорная':'Отдам бесплатно'}</label>)}</fieldset>
- <label>Описание <small>Обязательно</small><textarea id="listing-description" minLength={10} maxLength={4000} value={draft.description} onChange={e=>update({description:e.target.value})} placeholder="Что продаёте, особенности и что входит в комплект"/></label>
+ <h3 className="listing-field-heading">4. Описание</h3><label>Описание <small>Обязательно</small><textarea id="listing-description" minLength={10} maxLength={4000} value={draft.description} onChange={e=>update({description:e.target.value})} placeholder="Что продаёте, особенности и что входит в комплект"/></label>
  </>}
  {step===1&&<>
  <p>Укажите имя, телефон и место передачи. Сохраним эти данные для следующих объявлений.</p>
@@ -230,7 +229,7 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  </div>
  </fieldset></form></>}
  </section>
- <section className="listing-mine unified-my" id="my-listings"><div className="unified-section-heading"><h2>Мои объявления{products.length?' · '+products.length:''}</h2>{saved&&<button className="d-btn secondary" type="button" onClick={another}><Plus size={16}/>Добавить товар</button>}</div>{stockNotice&&<p className="unified-stock-notice" role="status">{stockNotice}</p>}
+ <section className="listing-mine unified-my" id="my-listings"><div className="unified-section-heading"><div><h2>Мои объявления</h2><p>Здесь можно проверить статус, изменить цену и остаток или снять карточку с продажи.</p></div>{saved&&<button className="d-btn secondary" type="button" onClick={another}><Plus size={16}/>Добавить товар</button>}</div><div className="listing-mine-summary"><span><b>{products.length}</b> всего</span><span><b>{publicCount}</b> в поиске</span><span><b>{reviewCount}</b> на проверке</span></div>{stockNotice&&<p className="unified-stock-notice" role="status">{stockNotice}</p>}
  <SellerStats key={saved?'submitted':'editing'}/>
  {!products.length?<div className="unified-empty"><Package size={32}/><p>Здесь появятся ваши товары и их статусы. Начните с первого фото выше.</p></div>:<div className="unified-products">{products.map(p=><article key={p.id} id={'listing-'+encodeURIComponent(p.id)}><div className="unified-product-image">{p.photos[0]?<img src={p.photos[0]} alt={p.name}/>:<Package size={32}/>}</div><div className="unified-product-body"><small className={'unified-status '+(p.quantity===0?'inactive':p.published&&shop?.visibility==='public'?'public':'pending')}>{p.quantity===0?'Снято с продажи':p.published&&shop?.visibility==='public'?'В поиске':'На проверке'}</small><h3>{p.name}</h3><strong>{p.priceMode==='free'?'Бесплатно':p.price===null?'Договорная':money(p.price)}</strong><p>{p.condition==='used'?'Б/у':p.condition==='new'?'Новый':'Состояние не указано'}</p><p><MapPin size={14}/>{shop?.city}, {shop?.street}</p>{p.quantity!==0&&<form className="unified-stock-edit" onSubmit={e=>{e.preventDefault();const value=Number(new FormData(e.currentTarget).get('quantity'));void updateStock(p,value);}}><label>Остаток <input key={p.id+':'+p.quantity} name="quantity" type="number" min="0" max="10000000" step="1" required defaultValue={p.quantity??''} placeholder="Не указан" aria-label={`Остаток: ${p.name}`}/></label><button type="submit" disabled={busy}>Сохранить</button></form>}<div className="unified-product-actions"><a href="/messages">Сообщения покупателей</a><button type="button" disabled={busy} onClick={()=>void edit(p)}><Pencil size={14}/>Изменить</button><button type="button" disabled={busy||uploading||!ready} onClick={()=>void edit(p,true)}><Sparkles size={14}/>Изменить с помощником</button>{shop&&<a href={route(shop)} target="_blank" rel="noreferrer"><Navigation size={14}/>Маршрут</a>}{p.quantity!==0&&<button type="button" disabled={busy} onClick={()=>void withdraw(p)}>Снять с продажи</button>}</div></div></article>)}</div>}
  </section>

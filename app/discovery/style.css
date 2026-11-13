@@ -304,6 +304,7 @@
 .search-origin.seller-confirmed{background:#ddf8e8;color:#147743!important}.search-origin.website{background:#eaf2ff;color:#145fc2!important}.search-origin.organization{background:#fff3d6;color:#825c09!important}
 .finder-location-overlay{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:16px;background:#0c1b32a8;backdrop-filter:blur(5px)}
 .finder-location-dialog{width:min(460px,100%);max-height:calc(100dvh - 32px);overflow:auto;margin:0;padding:28px;border:1px solid #e1e9f3;border-radius:24px;background:#fff;box-shadow:0 26px 80px #071a3540;text-align:center}
+.finder-manual-address{text-align:left}.finder-manual-address h2,.finder-manual-address>p{text-align:left}.finder-manual-address .journey-address{position:relative;width:100%;margin:12px 0}.finder-manual-address .journey-address input{width:100%;box-sizing:border-box}.finder-manual-address .journey-address ul{position:relative;width:100%;max-height:200px;overflow:auto}
 .finder-location-dialog:focus{outline:none}
 .finder-location-icon{width:58px;height:58px;display:grid;place-items:center;margin:0 auto 15px;border-radius:19px;background:#eaf2ff;color:#0866ff}
 .finder-location-dialog h2{margin:0 0 10px;color:#172538;font-size:24px;line-height:1.2;letter-spacing:-.025em}

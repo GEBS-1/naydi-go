@@ -19,3 +19,5 @@
 @media (min-width: 1500px) { .favorites-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .favorites-copy h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; margin: 2px 0; }
 .favorites-card { min-width: 0; }
+.favorites-controls{align-items:center}.favorites-query{flex:1 1 240px;max-width:360px;min-height:44px;box-sizing:border-box}.favorites-query svg{flex:none}.favorites-query input{width:100%;min-width:0;box-sizing:border-box}.favorites-sort select{min-height:44px}.favorites-empty{display:grid;justify-items:center;align-content:center;min-height:200px;box-sizing:border-box}.favorites-empty h2{margin:8px 0 0}
+@media(max-width:760px){.favorites-query{max-width:none}.favorites-controls{gap:10px}}

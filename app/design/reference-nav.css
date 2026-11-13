@@ -1,4 +1,5 @@
 .ng-app .reference-header{display:flex;align-items:center;gap:18px;height:74px;padding:0 28px;background:#fff;border-bottom:1px solid #e6eef8}
+.header-brand-location{display:flex;align-items:center;gap:18px;min-width:0}.header-brand-location .d-city-slot{display:flex;align-items:center}.header-brand-location .finder-header-city{max-width:180px;white-space:nowrap}.header-brand-location .finder-header-city span{overflow:hidden;text-overflow:ellipsis}
 .ng-app .reference-header nav{display:flex;gap:16px;align-items:center}
 .ng-app .reference-header nav a{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#24324a;font-size:15px;font-weight:650}
 .ng-app .reference-header nav a:hover,.ng-app .reference-header nav a[aria-current="page"]{color:#075eff}
@@ -23,3 +24,4 @@
 @media(max-width:950px){.v3-header .header-fav{display:grid}}
 @media(max-width:1150px){.ng-app .reference-header nav{gap:8px;font-size:13px}.reference-header .header-fav span{display:none}}
 @media(max-width:900px){.ng-app .reference-header nav{display:none}.reference-header .header-tools{gap:6px}}
+@media(max-width:690px){.header-brand-location{gap:6px}.header-brand-location .finder-header-city{max-width:135px;padding:6px;font-size:12px}.header-brand-location .finder-header-city span{max-width:85px}}
