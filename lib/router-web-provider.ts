@@ -2,9 +2,7 @@ import {searchCatalogPages} from './catalog-page-search';
 import {matchesMerchantSource,merchantSearchSources} from './merchant-search-sources';
 import {enrichOffers} from './offer-enrichment';
 import {relevantOffers} from './offer-relevance';
-import {queryVariants} from './query-variants';
 import {normalize} from './search';
-import {resolveSearch} from './search-context';
 import {deduplicate} from './city-search';
 import {cacheHit} from './search-usage';
 import {env} from '@/lib/server-env';
@@ -88,22 +86,13 @@ export function routerWebProvider():WebSearchProvider|null{
  const base=baseProvider();if(!base)return null;
  return {name:base.name,async search(query,city,near,nearArea,onPartial){
  const key='web:planned-'+WEB_SEARCH_PROMPT_VERSION+':'+base.name+':'+normalize(city)+nearKey(near)+':'+normalize(nearArea||'')+':'+normalize(query),cached=await cacheRead<SearchHit[]>(key);if(cached){cacheHit();await locatePublishedBusinesses(cached,city);return relevantOffers(repairProductLinks(cached),query,city);}
-  const started=performance.now();
-  const hits=await base.search(query,city,near,nearArea),budget=resolveSearch(query).maxPrice;
+  const hits=await base.search(query,city,near,nearArea);
   if(hits.length)await onPartial?.(hits);
-  const firstProducts=hits.filter(hit=>hit.kind==='product');
-  const firstHosts=new Set(firstProducts.map(hit=>new URL(hit.source).hostname.replace(/^www\./,'')));
-  if(firstProducts.length>=2&&firstHosts.size===1&&!/-site:/iu.test(query)&&performance.now()-started<8000){
-   const dominant=[...firstHosts][0];
-   try{hits.push(...(await base.search(`${query} -site:${dominant}`,city,near,nearArea)).filter(hit=>new URL(hit.source).hostname.replace(/^www\./,'')!==dominant));}catch{/* Keep the first seller if a second source is unavailable. */}
-  }
   // A second broad Sonar request often repeats the same category pages while
   // doubling cost and latency. Keep the first verified response and let the
   // buyer refine the query if it contains no concrete product pages.
-  const useful=()=>hits.some(h=>h.kind==='product'&&h.price!==null&&(budget===undefined||h.price<=budget)&&h.sourceAvailability!=='out_of_stock');
-  if(/подар|подобрать|посовет/iu.test(query)&&!useful()){
-   try{for(const variant of await queryVariants(query,city)){hits.push(...await base.search(variant,city,near,nearArea));if(useful())break;}}catch{/* Keep already verified sources on model/budget/provider failure. */}
-  }
+  // Keep one product-web request per search. If it yields no priced offer,
+  // show the verified links and ask the buyer to refine the query.
   const result=deduplicate(relevantOffers(hits,query,city));await cacheWrite(key,result,1800000);return result;
  }};
 }

@@ -14,8 +14,6 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <BuyerApp>
-      <footer className="naydigo-home-footer"><a href="/about">О НайдиGO</a></footer>
-    </BuyerApp>
+    <BuyerApp />
   );
 }

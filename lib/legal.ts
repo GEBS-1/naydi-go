@@ -1,7 +1,6 @@
-export const legalVersion = '2026-11-06';
+export const legalVersion = '2026-11-13';
 
 export const legalLinks = [
-  {href:'/legal/operator', label:'Владелец сервиса'},
   {href:'/legal/terms', label:'Условия использования'},
   {href:'/legal/offer', label:'Оферта платных функций'},
   {href:'/legal/privacy', label:'Персональные данные'},

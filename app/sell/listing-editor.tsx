@@ -8,6 +8,7 @@ import ListingAssistant from './listing-assistant';
 import PhoneImport from './phone-import';
 import SellerLocation from './seller-location';
 import './reference-listing.css';
+const quickCategories=['Авто и запчасти','Дом и ремонт','Электроника','Спорт и отдых','Сад и огород','Зоотовары','Услуги'];
 function emptyDraft(shop:Shop|null,accountName:string):ListingDraft{return {id:crypto.randomUUID(),sellerName:savedSellerName(shop,accountName),sellerType:shop?.sellerType||(shop?'business':'private'),companyName:shop&&shop.sellerType!=='private'?shop.name:'',name:'',description:'',category:'Личные вещи',condition:'',price:'',priceMode:'fixed',photos:[],city:shop?.city||'',street:shop?.street||'',phone:shop?.phone||'',point:shop&&Number.isFinite(shop.lat)&&Number.isFinite(shop.lng)?{label:shop.street,city:shop.city,lat:shop.lat,lng:shop.lng}:null};}
 function savedSellerName(shop:Shop|null,accountName:string){
  return (shop?.sellerName||(shop?.sellerType==='private'?shop.name:'')||accountName).trim().slice(0,100);
@@ -182,7 +183,8 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  {step===0&&<>
  <h3 className="listing-field-heading">2. Что продаёте</h3>
  <label>Название товара <small>Обязательно</small><input id="listing-name" minLength={3} maxLength={200} value={draft.name} onChange={e=>update({name:e.target.value})} placeholder="Например: детский велосипед"/></label>
- <label>Категория <small>Помогает найти объявление</small><input id="listing-category" maxLength={100} value={draft.category} onChange={e=>update({category:e.target.value})} placeholder="Например: Велосипеды"/></label>
+ <label>Категория <small>Выберите или напишите свою</small><input id="listing-category" maxLength={100} value={draft.category} onChange={e=>update({category:e.target.value})} placeholder="Например: Велосипеды"/></label>
+ <div className="listing-category-choices" role="group" aria-label="Быстрый выбор категории">{quickCategories.map(category=><button key={category} type="button" className={draft.category===category?'selected':''} aria-pressed={draft.category===category} onClick={()=>update({category})}>{category}</button>)}</div>
  <h3 className="listing-field-heading">3. Состояние и цена</h3>
  <div className="unified-field-pair"><label>Состояние <small>Обязательно</small><select id="listing-condition" value={draft.condition} onChange={e=>update({condition:e.target.value as ListingDraft['condition']})}><option value="">Выберите состояние</option><option value="used">Б/у</option><option value="new">Новый</option></select></label>
  <label>Цена, ₽ <small>{draft.priceMode==='fixed'?'Обязательно':'Сумма не требуется'}</small><input id="listing-price" type="number" min="0" max="1000000000" step="0.01" disabled={draft.priceMode!=='fixed'} value={draft.priceMode==='free'?'0':draft.priceMode==='negotiable'?'':draft.price} onChange={e=>update({price:e.target.value})} placeholder="Укажите цену"/></label></div>

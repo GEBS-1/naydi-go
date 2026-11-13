@@ -186,7 +186,13 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
     :catalogAndWebParallel(sellerTask,async onPartial=>searchWeb(webQuery,input.city,[],input.near,await area,onPartial),browse,publishSourceHits);
   const nearbyBounds=input.near?[input.near.lat-.07,input.near.lng-.12,input.near.lat+.07,input.near.lng+.12] as Bounds:undefined;
   const osmPromise=findOrganizations(agentIntent,input.city,input.bounds||nearbyBounds).catch(()=>({hits:[] as SearchHit[],status:'unavailable'})).then(async osm=>{if(osm.hits.length)await publishSourceHits({hits:osm.hits,status:result.sources.web,catalogStatus:result.sources.catalog||'pending'});return osm;});
-  const placePromise=browse?Promise.resolve({hits:[] as SearchHit[],status:'skipped'}):area.then(a=>searchWebPlaces(intent.query,input.city,input.near,a)).then(async places=>{if(places.hits.length)await publishSourceHits({hits:places.hits,status:result.sources.web,catalogStatus:result.sources.catalog||'pending'});return places;});
+  const placePromise=browse?Promise.resolve({hits:[] as SearchHit[],status:'skipped'}):osmPromise.then(async osm=>{
+    const mapped=relevantOffers(osm.hits,intent.query,input.city).filter(h=>h.point&&h.address).length;
+    if(mapped>=2)return {hits:[] as SearchHit[],status:'osm-places'};
+    const places=await searchWebPlaces(intent.query,input.city,input.near,await area);
+    if(places.hits.length)await publishSourceHits({hits:places.hits,status:result.sources.web,catalogStatus:result.sources.catalog||'pending'});
+    return places;
+  });
   // Stream each seller/web source as it finishes; the slower one must not hold
   // back cards already extracted from the other source.
   const [osm,web,places]=await Promise.all([osmPromise,webTask,placePromise]);
@@ -225,7 +231,7 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
       const verified=addresses.hits.filter(h=>h.kind==='store'&&h.point&&h.address&&h.locationEvidence==='confirmed-point');
       knownLocations.push(...verified);
       if(verified.length)await publishSourceHits({hits:verified,status:web.status,catalogStatus:web.catalogStatus});
-    }else{
+    }else if((currentUsage()?.calls.filter(call=>call.model==='perplexity/sonar').length||0)<2){
       const extra=await searchNearbyMerchants(webQuery,input.city,knownLocations,input.near,await area).catch(()=>[]);
       if(extra.length)await publishSourceHits({hits:extra,status:web.status,catalogStatus:web.catalogStatus});
     }
