@@ -186,9 +186,10 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
     :catalogAndWebParallel(sellerTask,async onPartial=>searchWeb(webQuery,input.city,[],input.near,await area,onPartial),browse,publishSourceHits);
   const nearbyBounds=input.near?[input.near.lat-.07,input.near.lng-.12,input.near.lat+.07,input.near.lng+.12] as Bounds:undefined;
   const osmPromise=findOrganizations(agentIntent,input.city,input.bounds||nearbyBounds).catch(()=>({hits:[] as SearchHit[],status:'unavailable'})).then(async osm=>{if(osm.hits.length)await publishSourceHits({hits:osm.hits,status:result.sources.web,catalogStatus:result.sources.catalog||'pending'});return osm;});
-  const placePromise=browse?Promise.resolve({hits:[] as SearchHit[],status:'skipped'}):osmPromise.then(async osm=>{
-    const mapped=relevantOffers(osm.hits,intent.query,input.city).filter(h=>h.point&&h.address).length;
-    if(mapped>=2)return {hits:[] as SearchHit[],status:'osm-places'};
+  const placePromise=browse?Promise.resolve({hits:[] as SearchHit[],status:'skipped'}):Promise.all([osmPromise,webTask]).then(async ([osm,web])=>{
+    const mappedPlaces=relevantOffers(osm.hits,intent.query,input.city).filter(h=>h.point&&h.address).length;
+    const mappedProducts=web.hits.filter(h=>h.kind==='product'&&h.point&&h.address).length;
+    if(mappedProducts>0||mappedPlaces>=2)return {hits:[] as SearchHit[],status:'existing-places'};
     const places=await searchWebPlaces(intent.query,input.city,input.near,await area);
     if(places.hits.length)await publishSourceHits({hits:places.hits,status:result.sources.web,catalogStatus:result.sources.catalog||'pending'});
     return places;
@@ -218,7 +219,8 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
   const firstOffers=matchSellerLocations([...result.hits,...web.hits],knownLocations,input.near);
   const products=firstOffers.filter(h=>h.kind==='product'&&h.sourceAvailability!=='out_of_stock');
   const sellerPoints=new Set(products.filter(h=>h.point&&h.address).map(h=>h.address));
-  if(!browse&&intent.kind==='product'&&sellerPoints.size<2&&performance.now()-started<30000){
+  const sonarCalls=()=>currentUsage()?.calls.filter(call=>call.model==='perplexity/sonar').length||0;
+  if(!browse&&intent.kind==='product'&&sellerPoints.size===0&&sonarCalls()<2&&performance.now()-started<30000){
     const sites=[...new Set(products.filter(h=>!h.point).flatMap(h=>{
       const url=safeHTTP(h.site||h.source);
       if(!url)return [];
@@ -231,7 +233,7 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
       const verified=addresses.hits.filter(h=>h.kind==='store'&&h.point&&h.address&&h.locationEvidence==='confirmed-point');
       knownLocations.push(...verified);
       if(verified.length)await publishSourceHits({hits:verified,status:web.status,catalogStatus:web.catalogStatus});
-    }else if((currentUsage()?.calls.filter(call=>call.model==='perplexity/sonar').length||0)<2){
+    }else if(sonarCalls()<2){
       const extra=await searchNearbyMerchants(webQuery,input.city,knownLocations,input.near,await area).catch(()=>[]);
       if(extra.length)await publishSourceHits({hits:extra,status:web.status,catalogStatus:web.catalogStatus});
     }
