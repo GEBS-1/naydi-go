@@ -100,6 +100,7 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
   const focus=await agentFocus(intent.query||input.query,input.city);
   if(focus.labels.length)steps.push('agent-focus');
 
+  const nearbyTier=(h:SearchHit)=>h.kind==='product'&&h.point&&h.address?0:h.point&&h.address?1:h.kind==='product'?2:3;
   const constrain=(list:SearchHit[])=>list
     .filter(h=>!context.newOnly||h.product?.condition!=='used')
     .filter(h=>(context.maxPrice===undefined||h.price===null||h.price<=context.maxPrice)&&(context.radiusKm===undefined||h.distanceKm===null||h.distanceKm<=context.radiusKm))
@@ -108,9 +109,8 @@ async function runAgentMeasured(input:AgentSearchRequest,emit?:(r:AgentSearchRes
       :context.sort==='price'
         ?(a.price??Infinity)-(b.price??Infinity)
         :input.near
-          ?Number(!a.point||!a.address)-Number(!b.point||!b.address)
+          ?nearbyTier(a)-nearbyTier(b)
             ||(a.distanceKm??Infinity)-(b.distanceKm??Infinity)
-            ||(a.kind==='product'?0:1)-(b.kind==='product'?0:1)
             ||relevanceScore(b,intent.query)-relevanceScore(a,intent.query)
           :Number(!a.point||!a.address)-Number(!b.point||!b.address)||relevanceScore(b,intent.query)-relevanceScore(a,intent.query));
 
