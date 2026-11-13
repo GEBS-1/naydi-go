@@ -1,5 +1,4 @@
 'use client';
-import AccountShortcut from '../account/account-shortcut';
 import PrimarySiteNav from '../primary-site-nav';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {MapPin,Plus,Check,Camera,Package,Store,Pencil,Sparkles,Navigation,FileText} from 'lucide-react';
@@ -138,7 +137,7 @@ export default function ListingEditor({initialShop,accountName,storeMode=false}:
  const stepLabels=storeMode?["Товары","Адрес и контакты","Предпросмотр"]:listingSteps;
  const editing=products.some(p=>p.id===draft.id);
  return <main className="business-demo marketplace-flow design listing-editor unified-seller">
- <header className="seller-primary-header"><a className="seller-primary-brand" href="/">Найди<span>Go</span></a><PrimarySiteNav current="Разместить"/><AccountShortcut name={accountName}/></header>
+ <header className="seller-primary-header"><a className="seller-primary-brand" href="/">Найди<span>Go</span></a><PrimarySiteNav current="Разместить"/></header>
  <section className="unified-intro"><div><p className="business-kicker">ТОВАРЫ РЯДОМ · ЛЮДИ И МАГАЗИНЫ</p><h1>{saved?(published?'Объявление опубликовано':'Объявление отправлено'):editing?'Изменить объявление':storeMode?'Подключение магазина':'Разместить объявление'}</h1><p>{saved?(published?'Товар доступен покупателям в поиске и на карте.':'Всё сохранено. После проверки товар появится в поиске и на карте.'):storeMode?'Добавьте магазин в НайдиGo, чтобы покупатели находили ваши товары рядом.':'Фото → готовая карточка → покупатель рядом.'}</p></div><div className="unified-mini-map" aria-hidden="true"><span className="map-path"/><MapPin className="map-pin-one"/><Store className="map-pin-two"/><Package className="map-pin-three"/><small>Покупатели рядом</small></div></section>
  <section className="business-step">
  {error&&<p role="alert">{error}</p>}

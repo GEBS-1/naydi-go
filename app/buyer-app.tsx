@@ -1,5 +1,4 @@
 'use client';
-import AccountShortcut from './account/account-shortcut';
 import {lazy,Suspense,useEffect,useState} from 'react';
 import {MapPin} from 'lucide-react';
 import SearchClient from './discovery/search-client';
@@ -28,7 +27,7 @@ export default function BuyerApp({children}:{children?:React.ReactNode}){
  return <div className="design ng-app"><header className={'d-header reference-header v3-header'+(home?' reference-header-home':profile?' reference-header-profile':' reference-header-app')}>
   <a className="d-brand" href="#home"><MapPin strokeWidth={3}/><span>Найди<span>Go</span></span></a>
   <PrimarySiteNav current={current}/>
-  <div className="header-tools"><div id="buyer-city-slot" className="d-city-slot"/><AccountShortcut/></div>
+  <div className="header-tools"><div id="buyer-city-slot" className="d-city-slot"/></div>
  </header><main className="d-main">{content}{home&&children}</main><PrimarySiteNav current={current} mobile/></div>;
 }
 function Loading(){return <div className="ng-empty"><h1>Загружаем раздел…</h1></div>}
