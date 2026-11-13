@@ -5,6 +5,14 @@ import {env} from '@/lib/server-env';
 import {quota,guest} from './discovery-server';
 export function cookieValue(req:Request,name:string){return req.headers.get('cookie')?.match(new RegExp('(?:^|;\\s*)'+name+'=([a-f0-9]{64})'))?.[1]||'';}
 export function buyerCookie(name:string,value:string,seconds:number){return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${seconds}${buyerConfig().base.startsWith('https:')?'; Secure':''}`;}
+const buyerSessionSeconds=365*86400;
+export async function renewBuyerSession(req:Request){
+ const value=cookieValue(req,'ng_buyer');if(!value)return null;
+ const now=Date.now(),expires=now+buyerSessionSeconds*1000;
+ const row=await db().prepare('UPDATE buyer_sessions SET expires_at=? WHERE hash=? AND expires_at>? AND expires_at<? RETURNING hash')
+  .bind(expires,await hash(value),now,expires-86400000).first();
+ return row?buyerCookie('ng_buyer',value,buyerSessionSeconds):null;
+}
 export function buyerOrigin(req:Request){const origin=req.headers.get('origin');if(!origin||origin!==requestOrigin(req)||origin!==new URL(buyerConfig().base).origin)throw Error('Недопустимый источник запроса');}
 export async function buyerIdentity(req:Request){if(!buyerConfig().enabled)return null;const value=cookieValue(req,'ng_buyer');if(!value)return null;return db().prepare('SELECT a.id,a.name,COALESCE(s.login_provider,a.provider) AS provider FROM buyer_accounts a JOIN buyer_sessions s ON s.buyer_id=a.id WHERE s.hash=? AND s.expires_at>?').bind(await hash(value),Date.now()).first<{id:string;name:string;provider:string}>();}
 export async function linkBuyerAccount(req:Request,link:boolean){const account=link?await buyerIdentity(req):null;if(link&&(!account||!/^(telegram|max):[^:]+$/.test(account.id)))throw Error('Сначала войдите в аккаунт, к которому привязываете способ входа');return account;}
@@ -59,11 +67,11 @@ export async function issueBuyerSession(req:Request,row:{hash:string;provider:st
   // Keep the saved name. The identity insert below still expects one affected row.
   db().prepare('INSERT INTO buyer_accounts(id,provider,subject,name,created_at) SELECT ?,?,?,?,? WHERE changes()=1 ON CONFLICT(id) DO UPDATE SET name=buyer_accounts.name').bind(id,row.provider,row.subject,row.name,Date.now()),
   db().prepare('INSERT INTO buyer_identities(provider,subject,buyer_id,created_at) SELECT ?,?,?,? WHERE changes()=1 ON CONFLICT(provider,subject) DO UPDATE SET buyer_id=buyer_id WHERE buyer_id=excluded.buyer_id').bind(row.provider,row.subject,id,Date.now()),
-  db().prepare('INSERT INTO buyer_sessions(hash,buyer_id,expires_at,login_provider) SELECT ?,?,?,? WHERE changes()=1').bind(await hash(session),id,Date.now()+30*86400000,row.provider),
+  db().prepare('INSERT INTO buyer_sessions(hash,buyer_id,expires_at,login_provider) SELECT ?,?,?,? WHERE changes()=1').bind(await hash(session),id,Date.now()+buyerSessionSeconds*1000,row.provider),
   db().prepare("INSERT OR IGNORE INTO buyer_grants(id,buyer_id,remaining,kind) SELECT ?,?,MIN(10,COALESCE((SELECT remaining FROM buyer_grants WHERE id=?),10)),'free' WHERE EXISTS(SELECT 1 FROM buyer_sessions WHERE hash=?)").bind('free:'+id,id,'free:guest:'+visitor.key,await hash(session)),
   db().prepare('UPDATE buyer_grants SET remaining=0 WHERE id=? AND EXISTS(SELECT 1 FROM buyer_sessions WHERE hash=?)').bind('free:guest:'+visitor.key,await hash(session))
  ]);
  if(!result[0].meta.changes||!result[2].meta.changes)throw Error('Код уже использован');
- return buyerCookie('ng_buyer',session,30*86400);
+ return buyerCookie('ng_buyer',session,buyerSessionSeconds);
 }
 export async function logoutBuyer(req:Request){buyerOrigin(req);const value=cookieValue(req,'ng_buyer');if(value)await db().prepare('DELETE FROM buyer_sessions WHERE hash=?').bind(await hash(value)).run();return buyerCookie('ng_buyer','',0);}

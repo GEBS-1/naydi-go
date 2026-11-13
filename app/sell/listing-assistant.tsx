@@ -5,7 +5,7 @@ import {listingMissing,listingSteps,type ListingDraft,type ListingSuggestion} fr
 import {useVoiceDictation} from '../use-voice-dictation';
 type Message={role:'user'|'assistant';text:string};
 export default function ListingAssistant({draft,step,onApply,disabled=false,initiallyOpen=false,editing=false}:{draft:ListingDraft;step:number;initiallyOpen?:boolean;editing?:boolean;disabled?:boolean;onApply:(patch:ListingSuggestion)=>void}){
- const [mode,setMode]=useState<'choice'|'chat'|'manual'>(initiallyOpen?'chat':'choice');
+ const [mode,setMode]=useState<'choice'|'chat'|'manual'>(initiallyOpen||!editing?'chat':'choice');
  const [messages,setMessages]=useState<Message[]>([]),[text,setText]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[proposal,setProposal]=useState<{patch:ListingSuggestion;baseline:string}|null>(null);
  const voice=useVoiceDictation(spoken=>setText(spoken),1500);
  const remaining=listingMissing(draft,step);
@@ -31,8 +31,11 @@ export default function ListingAssistant({draft,step,onApply,disabled=false,init
  <button className="d-btn secondary" type="button" onClick={()=>setMode('manual')}>Заполнить вручную</button>
  </div>
  </>:<>
+ {messages.length===0&&<p className="listing-assistant-welcome">Здравствуйте! Помогу составить объявление. Расскажите, что продаёте, или загрузите своё фото — предложу название, категорию и описание. Вы проверите поля перед сохранением.</p>}
  <p aria-live="polite"><strong>{listingSteps[step]}.</strong> {stepHint}</p>
+ {step===0&&<div className="listing-assistant-actions"><button className="d-btn secondary" type="button" disabled={disabled} onClick={()=>document.getElementById('listing-photos')?.click()}><Camera size={17}/>Добавить своё фото</button><button className="d-btn secondary" type="button" onClick={()=>document.getElementById('listing-name')?.focus()}>Заполнить вручную</button></div>}
  {step===0&&draft.photos.length>0&&<div className="listing-quick-create"><button className="d-btn secondary" type="button" disabled={busy||disabled} onClick={()=>void send(text.trim()||'Подготовь карточку товара по фото',true)}><Camera size={17}/>{busy?'Готовлю карточку…':'Создать карточку по фото'}</button><small>Использую первое фото из формы.</small></div>}
+ {remaining.length>0&&<p className="listing-assistant-remaining">Осталось заполнить: {remaining.slice(0,3).join('; ')}.</p>}
  <div className="listing-chat" role="log" aria-label="Разговор с помощником">{messages.map((m,i)=><p key={i} className={'listing-chat-'+m.role}><b>{m.role==='user'?'Вы':'Помощник'}:</b> {m.text}</p>)}</div>
  <div className="listing-help-chips">{draft.name.trim().length>=3&&<button type="button" disabled={busy||disabled} onClick={()=>void send('Как улучшить название и описание для поиска? Используй только заполненные сведения и объясни, почему вариант проще найти.')}>Улучшить для поиска</button>}<button type="button" disabled={busy||disabled} onClick={()=>void send('Что обязательно заполнить, а что можно пропустить?')}>Что обязательно?</button><button type="button" disabled={busy||disabled} onClick={()=>void send('Кто увидит адрес и телефон?')}>Кто увидит контакты?</button></div>
  <label>Сообщение помощнику<textarea maxLength={1500} value={text} onChange={e=>setText(e.target.value)} placeholder="Например: велосипед Stels, б/у, 5500 рублей. Можно добавить подсказку к фото."/></label><div className="listing-assistant-actions">{voice.phase==='recording'?<button className="d-btn secondary" type="button" onClick={()=>void voice.finish(false)}><Square size={15}/>Остановить · {Math.floor(voice.seconds/60)}:{String(voice.seconds%60).padStart(2,'0')}</button>:<button className="d-btn secondary" type="button" disabled={busy||disabled||voice.phase!=='idle'} onClick={()=>void voice.start()}><Mic size={15}/>{voice.phase==='idle'?'Продиктовать':'Распознаю…'}</button>}<button className="d-btn secondary" type="button" disabled={busy||disabled||voice.phase!=='idle'||text.trim().length<2} onClick={()=>void send()}><Send size={15}/>{busy?'Готовлю подсказку…':'Отправить помощнику'}</button></div>{voice.message&&<p role="status">{voice.message}</p>}
