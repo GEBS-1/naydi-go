@@ -286,3 +286,43 @@
  .home-example-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 3px 8px}
  .finder .home-example{flex:0 0 min(225px,72vw);scroll-snap-align:start}
 }
+
+/* One offer layout is shared by list and map; details open over either view. */
+.finder .nearby-quick-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.finder .nearby-quick-filters button{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:7px 13px;border:1px solid #d9e5f6;border-radius:999px;background:#fff;color:#1c365c;font-weight:650;cursor:pointer}
+.finder .nearby-quick-filters button[aria-pressed=true]{background:#e5f3eb;border-color:#b7e2c4;color:#197442}
+.nearby-view{padding:3px;border-radius:13px;background:#edf3fb}
+.nearby-view a{min-width:74px;text-align:center;text-decoration:none;font-weight:750}
+.nearby-view a[aria-current=page]{background:#0866ff;color:#fff;box-shadow:0 4px 12px #0866ff2b}
+.nearby-focus .finder-results-grid .search-hit.nearby-card{position:relative;gap:15px;margin:0 0 10px;padding:13px;border:1px solid #e1e9f5;border-radius:17px;background:#fff;box-shadow:0 5px 17px #213b6a0b}
+.nearby-focus .finder-results-grid .search-hit.nearby-card:hover{border-color:#aac8fb;box-shadow:0 8px 22px #213b6a18}
+.nearby-focus .finder-results-grid .search-hit.nearby-card[data-selected=true]{border-color:#0866ff;background:#f8fbff}
+.nearby-focus .finder-results-grid .search-hit.nearby-card.nearby-product>div.nearby-card-image{flex:0 0 120px;width:120px;min-width:120px;max-width:120px;height:138px;background:#f4f7fb}
+.nearby-card .nearby-source-label{display:inline-block;margin:3px 0 5px;padding:4px 8px;border-radius:999px;background:#e9f2ff;color:#135fca;font-size:11px;font-weight:750}
+.nearby-card.nearby-listing .nearby-source-label{background:#e4f6e8;color:#168044}
+.nearby-card .nearby-card-heading strong{font-size:19px;color:#0b1d40}
+.nearby-detail-backdrop{position:fixed;inset:0;z-index:90;border:0;background:#12254599;cursor:pointer}
+.finder .finder-results-grid .search-hit.nearby-card.nearby-card-expanded{position:fixed;z-index:91;left:50%;top:50%;display:grid;grid-template-columns:minmax(230px,.9fr) minmax(280px,1.1fr);gap:22px;width:min(920px,calc(100vw - 32px));max-height:calc(100vh - 40px);margin:0;padding:24px;overflow:auto;transform:translate(-50%,-50%);border-radius:22px;box-shadow:0 25px 80px #12254555}
+.finder .finder-results-grid .search-hit.nearby-card.nearby-card-expanded>div.nearby-card-image{width:100%;max-width:none;min-width:0;height:min(420px,55vh);max-height:none;flex:none;background:#f4f7fb;border-radius:15px}
+.nearby-card-expanded .nearby-card-image img:not(.nearby-logo){object-fit:contain}
+.nearby-card-expanded .nearby-card-image .nearby-logo{width:90px;height:90px}
+.finder .nearby-detail-close{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:38px;height:38px;border:1px solid #d9e5f5;border-radius:50%;background:#fff;color:#17355b;cursor:pointer}
+.nearby-card-expanded .nearby-card-body{padding-right:20px!important}
+.nearby-card-expanded .nearby-card-heading h2{-webkit-line-clamp:unset!important;overflow:visible!important;font-size:24px!important}
+.nearby-card-expanded .nearby-card-heading strong{font-size:25px}
+.nearby-card-expanded .nearby-card-details{margin-top:18px}
+.nearby-card-expanded .nearby-card-details h3{margin:0 0 10px;font-size:16px}
+.nearby-card-expanded .nearby-card-details dl{display:grid;gap:8px;margin:14px 0}
+.nearby-card-expanded .nearby-card-details dl>div{display:grid;grid-template-columns:110px 1fr;gap:10px;border-bottom:1px solid #edf1f7;padding-bottom:7px}
+.nearby-card-expanded .nearby-card-details dt{color:#667b95}.nearby-card-expanded .nearby-card-details dd{margin:0;font-weight:650}
+@media(max-width:700px){.finder .finder-results-grid .search-hit.nearby-card.nearby-card-expanded{display:block;padding:14px;max-height:calc(100vh - 24px)}.finder .finder-results-grid .search-hit.nearby-card.nearby-card-expanded>div.nearby-card-image{height:240px;margin-bottom:12px}.nearby-card-expanded .nearby-card-body{padding-right:0!important}.nearby-card-expanded .nearby-card-heading h2{font-size:19px!important}.nearby-card-expanded .nearby-card-heading strong{font-size:21px}}
+
+/* Keep titles readable in the narrow list beside the map. */
+@media(min-width:761px){
+ .nearby-focus .finder-results-grid.map-view{grid-template-columns:minmax(440px,0.9fr) minmax(0,1.1fr)}
+ .nearby-focus .finder-results-grid.map-view .search-hit.nearby-card{grid-template-columns:84px minmax(0,1fr);gap:12px;padding:12px}
+ .nearby-focus .finder-results-grid.map-view .search-hit.nearby-card.nearby-product>div.nearby-card-image{width:84px;min-width:84px;max-width:84px;height:104px;flex-basis:84px}
+ .nearby-focus .finder-results-grid.map-view .nearby-card-body{min-width:0}
+ .nearby-focus .finder-results-grid.map-view .nearby-card-heading{min-width:0}
+ .nearby-focus .finder-results-grid.map-view .nearby-card-heading h2{font-size:15px;overflow-wrap:anywhere}
+}

@@ -4,7 +4,7 @@
 .favorites-sidebar{display:flex;flex-direction:column;gap:5px;padding:16px 12px;border-right:1px solid #e0e8f6}
 .favorites-sidebar a{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;color:#16243a;text-decoration:none;font-weight:600}
 .favorites-sidebar a:hover,.favorites-sidebar a[aria-current=page]{background:#e0edff;color:#075be1}
-.favorites-assistant{display:grid!important;gap:6px;margin-top:14px;padding:16px!important;border-radius:18px!important;background:#f3eaff!important;color:#3a2d73!important;line-height:1.35}
+.favorites-assistant{display:grid!important;gap:6px;margin-top:14px;padding:16px!important;border:0;border-radius:18px!important;background:#f3eaff!important;color:#3a2d73!important;line-height:1.35;text-align:left;cursor:pointer;font:inherit;font-weight:700}
 .favorites-assistant svg{color:#6d4aff}.favorites-assistant small{font-weight:500;color:#5c5388}.favorites-assistant b{display:inline-flex;justify-content:center;margin-top:6px;padding:10px 12px;border-radius:12px;background:#075bfb;color:#fff}
 .favorites-layout .favorites-screen{width:100%;min-width:0}
 @media(max-width:900px){.favorites-layout{display:block}.favorites-sidebar{display:none}}
@@ -14,5 +14,8 @@
  .ng-app:has(.favorites-layout) .d-header { height: 72px; padding-inline: 30px; }
  .d-main:has(.favorites-layout) { max-width: none; width: 100%; padding: 22px 24px 30px; }
  .favorites-layout { grid-template-columns: 260px minmax(0, 1fr); }
- .favorites-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+ .favorites-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (min-width: 1500px) { .favorites-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.favorites-copy h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; margin: 2px 0; }
+.favorites-card { min-width: 0; }

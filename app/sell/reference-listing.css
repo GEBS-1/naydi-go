@@ -52,3 +52,15 @@
 @media (min-width: 1050px) {
  .store-assortment-workspace { grid-template-columns: minmax(260px, 1fr) minmax(0, 2.3fr); }
 }
+
+/* Account actions already live behind the account link in the editor header. */
+.seller-account-settings:not([open]) { display: none; }
+.listing-editor.unified-seller { max-width: 1240px; padding-top: 12px; }
+.listing-editor.unified-seller > .unified-intro { margin: 8px 0 16px; }
+.listing-editor.unified-seller > .unified-intro h1 { font-size: clamp(30px, 3vw, 40px); }
+.listing-editor.unified-seller > .business-step { max-width: none; border-radius: 20px; }
+.listing-editor .seller-primary-brand span { color: #0866ff; background: none; border: 0; padding: 0; font-size: inherit; }
+@media (min-width: 1050px) {
+ .listing-editor .unified-form-fields.with-live-preview { padding-right: 570px; }
+ .listing-editor .with-live-preview > .listing-live-preview { position: absolute; top: 54px; right: 320px; width: 230px; }
+}

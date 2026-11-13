@@ -10,4 +10,4 @@ for(const [table,column,keys] of [['claims','store_id',targetStores.map(row=>row
  relations[table]=[];
  for(const id of keys){const row=await db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column}=?`).bind(id).first();if(Number(row?.n||0))relations[table].push({id,count:Number(row.n)});}
 }
-console.log(JSON.stringify({scope:'configured PostgreSQL; read-only',totals:{stores:stores.length,products:products.length},targetStores,targetProducts,relations},null,2));
+console.log(JSON.stringify({scope:'configured PostgreSQL; read-only',totals:{stores:stores.length,products:products.length},stores,products,targetStores,targetProducts,relations},null,2));

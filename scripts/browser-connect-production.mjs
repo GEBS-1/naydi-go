@@ -16,9 +16,9 @@ try{
   await page.waitForTimeout(3000);
   await writeFile(out+'/diagnostics.json',JSON.stringify(report,null,2));
   await expect(page.getByRole('link',{name:'Создать магазин бесплатно'})).toBeVisible();
-  await expect(page.getByRole('link',{name:'Посмотреть демо-магазин'})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Посмотреть пример витрины'})).toBeVisible();
   await page.getByRole('button',{name:'Оставить заявку'}).first().click();
-  const dialog=page.getByRole('dialog');
+  const dialog=page.locator('dialog.connect-application');
   await expect(dialog).toBeVisible();
   const select=dialog.getByLabel('Где вам ответить?');
   await expect(select).toBeVisible();

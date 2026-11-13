@@ -35,6 +35,8 @@ assert.equal(hasFreshOwnedStock([{...fresh,sourceAvailability:'out_of_stock'}],n
 assert.equal(hasFreshOwnedStock([{...fresh,sourceAvailability:'in_stock'}],now),true);
 const pageHit=(source,title)=>({id:source,kind:'page',title,description:'Найдена страница продавца',category:'',city:'Казань',address:null,point:null,phone:null,site:source,hours:null,source,checkedAt:'',price:null,image:null,status:'website'});
 assert.deepEqual(relevantOffers([pageHit('https://maikorcos.com/','Каталог продавца — уточнить цену'),pageHit('https://seller.example/catalog/geely-tugella','Катушка зажигания Geely Tugella')],'катушка зажигания Geely Tugella','Казань').map(hit=>hit.source),['https://seller.example/catalog/geely-tugella'],'unrelated seller pages must not pollute a specific product search');
+const misclassifiedStore={...pageHit('https://seller.example/product/pen','Ручка шариковая синяя, артикул 97201 — купить'),kind:'store'};
+assert.equal(relevantOffers([misclassifiedStore],'карандаши цветные 12 цветов','Казань').length,0);
 const {matchSellerLocations}=await bundled('lib/merchant-match.ts');
 const {catalogLocationHits}=await bundled('lib/catalog-locations.ts');
 const {autocraftQuery}=await bundled('lib/seller-catalog-rules.ts');

@@ -33,6 +33,12 @@ export function relevantOffers(hits:SearchHit[],query:string,city:string){
   if(h.kind!=='product'){
    if(h.kind!=='page'){
     const text=normalize(`${h.title} ${h.category} ${h.description} ${h.source}`);
+    // A product page title with a footer address is not a shop recommendation
+    // for a different item, even if an older cache classified it as a store.
+    if(h.kind==='store'&&/(?:артикул|купить|цена|оптом|₽)/iu.test(h.title)&&tokens.length){
+     const title=normalize(h.title);
+     if(!tokens.some(token=>title.includes(stem(token))))return false;
+    }
     // A directory can contain dozens of businesses. Every one must still fit the purchase.
     if(/раскраск|книг|книжк/iu.test(query))return /раскраск|книг|книж|канц|игруш|детск|читай|букв|books|stationery|toys/u.test(text)&&!/автосервис|детейлинг|кузов|autoservice|pokrask/u.test(text);
     if(/гаечн|ключ.*(?:торцев|рожков|накидн)/iu.test(query)&&/изготовлен.*ключ|key_cutter|locksmith/u.test(text))return false;

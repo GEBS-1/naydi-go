@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {MapPin,Navigation,Phone,ExternalLink,MessageCircle} from 'lucide-react';
+import {MapPin,Navigation,Phone,ExternalLink,MessageCircle,X} from 'lucide-react';
 import {routeHit,safeHTTP,type PublicSearchHit} from '@/lib/city-search';
 import {trackProductEvent} from '@/lib/product-events';
 import {money} from '@/lib/model';
@@ -13,11 +13,7 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
  const route=routeHit(h,near);
  const sourceUrl=safeHTTP(h.source);
  const sourceHost=sourceUrl?new URL(sourceUrl).hostname.replace(/^(?:www|m)\./,''):'';
- const sourceLabel=h.kind==='product'&&h.status!=='seller-confirmed'&&sourceHost
-  ? sourceHost==='t.me'||sourceHost==='telegram.me'?'Пост в Telegram'
-    : sourceHost==='vk.com'||sourceHost==='vk.ru'?'Пост ВКонтакте'
-    : sourceHost==='avito.ru'?'Объявление на Авито':'На сайте продавца'
-  : null;
+ const sourceLabel=h.kind==='product'?(h.status==='seller-confirmed'?'Объявление продавца':sourceHost?`Найдено в интернете · ${sourceHost}`:'Найдено в интернете'):null;
  const privateSeller=h.shop?.sellerType==='private';
  const seller=(h.seller||h.shop?.name||(h.kind==='store'?h.title:'')).trim();
  const image=h.image&&!/(?:no[-_]?image|no[-_]?photo|placeholder|default_part)/i.test(h.image)?h.image:null;
@@ -38,9 +34,10 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
  const source=safeHTTP(details?.source),site=safeHTTP(details?.site);
  const website=h.kind==='product'?source||site:site||source;
  const favoriteUrl=h.status==='seller-confirmed'&&h.product?'#product/'+h.product.id:h.shop?.id&&h.status==='seller-confirmed'?'#store/'+h.shop.id:sourceUrl||safeHTTP(h.site)||'#search/'+encodeURIComponent(h.title);
- return <article id={'search-hit-'+h.id} tabIndex={-1} data-selected={selected||undefined} onClick={onSelect} onFocus={onSelect} className={'search-hit nearby-card'+(h.kind==='product'?' nearby-product':'')+(h.product&&h.shop&&h.status==='seller-confirmed'?' nearby-listing':'')}>
+ return <>{expanded&&<button type="button" className="nearby-detail-backdrop" aria-label="Закрыть карточку предложения" onClick={()=>setExpanded(false)}/>}<article id={'search-hit-'+h.id} tabIndex={-1} data-selected={selected||undefined} onClick={onSelect} onFocus={onSelect} className={'search-hit nearby-card'+(h.kind==='product'?' nearby-product':'')+(h.product&&h.shop&&h.status==='seller-confirmed'?' nearby-listing':'')+(expanded?' nearby-card-expanded':'')}>
   <ResultImage key={image||h.source} src={image} title={h.title}/>
   <div className="nearby-card-body">
+   {expanded&&<button type="button" className="nearby-detail-close" aria-label="Закрыть карточку" onClick={()=>setExpanded(false)}><X size={20}/></button>}
    <div className="nearby-card-heading"><h2><button type="button" className="nearby-title" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{h.title}</button></h2>{h.price!==null?<strong>{h.product?.priceMode==='free'?'Бесплатно':money(h.price)}</strong>:h.product?.priceMode==='negotiable'?<strong>Договорная</strong>:h.kind==='product'?<span className="nearby-price-unknown">Цена не указана</span>:null}<FavoriteButton item={{id:h.kind+':'+h.id,title:h.title,kind:h.kind,url:favoriteUrl,city:h.city,image:image||undefined,price:h.price,checkedAt:h.checkedAt,address:route?h.address||undefined:undefined,destination:route?h.point||undefined:undefined}}/></div>
    {sourceLabel&&<small className="nearby-source-label">{sourceLabel}</small>}
    {(h.model||h.brand)&&<p className="nearby-model">{[h.brand,h.model].filter(Boolean).join(' · ')}</p>}
@@ -57,17 +54,17 @@ export default function ResultCard({hit:h,near,selected=false,onSelect}:{hit:Pub
     <button type="button" aria-expanded={expanded} onClick={()=>void openDetails()} disabled={loading}>{loading?'Открываем…':expanded?'Скрыть подробности':'Описание и контакты'}</button>
    </div>
    {error&&<p role="alert">{error}</p>}
-   {expanded&&details&&<div className="nearby-card-details">
+   {expanded&&details&&<div className="nearby-card-details"><h3>Описание и контакты</h3>
     {details.description?<p className="nearby-description">{details.description}</p>:h.kind==='product'&&<p>Описание товара не опубликовано в источнике.</p>}
     {details.hours&&<p>{details.hours}</p>}
     {phoneHref&&<a href={phoneHref} onClick={()=>trackProductEvent('phone_click',h.city)}><Phone size={14}/>{phone}</a>}
     {website&&<a href={website} target="_blank" rel="noreferrer" onClick={()=>trackProductEvent('seller_click',h.city)}><ExternalLink size={14}/>{h.kind==='product'?'Товар у продавца':'Сайт продавца'}</a>}
     {site&&site!==website&&<a href={site} target="_blank" rel="noreferrer">Сайт магазина</a>}
-    {h.checkedAt&&Number.isFinite(Date.parse(h.checkedAt))&&<p>Данные от {new Date(h.checkedAt).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</p>}
+    {!!h.characteristics?.length&&<dl>{h.characteristics.map(item=><div key={item.name}><dt>{item.name}</dt><dd>{item.value}</dd></div>)}</dl>}
     {!phoneHref&&!website&&<p>Контакты пока не опубликованы.</p>}
    </div>}
   </div>
- </article>;
+ </article></>;
 }
 function ResultImage({src,title}:{src:string|null;title:string}){
  const [failed,setFailed]=useState(false);

@@ -61,12 +61,13 @@ try{for(const width of [390,1440]){
  await expect(page.getByRole('heading',{name:'Найди товары и услуги рядом с тобой'})).toBeVisible();
  await expect(page.locator('.finder-categories')).toHaveCount(0);
  await expect(page.getByRole('dialog')).toHaveCount(0);
- await expect(page.getByRole('button',{name:'Рядом с вами · Казань',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Автоматически определить местоположение'}).click();
+ await expect(page.getByRole('button',{name:'Местоположение определено'})).toBeVisible();
  await page.screenshot({path:`${out}/home-${width}.png`,fullPage:true});
  await page.getByRole('textbox',{name:'Что хотите найти?'}).fill('раскраска с машинками');
  await page.getByRole('button',{name:'Найти',exact:true}).click();
  await expect(page.getByRole('heading',{name:book.title})).toBeVisible();
- await expect(page.locator('.nearby-card h2')).toHaveText([book.title,'Магазин для уточнения','Раскраска без адреса']);
+ await expect(page.locator('.nearby-card h2')).toHaveText([book.title,'Раскраска без адреса','Магазин для уточнения']);
  await expect(page.getByRole('heading',{name:'Где можно спросить'})).toBeVisible();
  assert.equal(searches.at(-1).city,'Казань');assert.equal(searches.at(-1).near.lat,55.8001);
  await expect(page.locator('.nearby-filters')).toHaveCount(0);
@@ -84,7 +85,7 @@ try{for(const width of [390,1440]){
  await expect(page.locator('.nearby-listing .nearby-card-image')).toBeVisible();
  await expect(page.locator('.nearby-listing').getByRole('link',{name:'Написать продавцу',exact:true})).toHaveAttribute('href','/messages?product=11111111-1111-4111-8111-111111111111');
  await page.screenshot({path:`${out}/results-${width}.png`,fullPage:true});
- await page.getByRole('button',{name:'Фильтры',exact:true}).click();
+ await page.getByRole('button',{name:'Ещё фильтры',exact:true}).click();
  await page.getByRole('button',{name:'Сайты',exact:true}).click();
  await expect(page.getByRole('link',{name:online.title})).toBeVisible();
  await page.getByRole('button',{name:'Все',exact:true}).click();
@@ -94,7 +95,8 @@ try{for(const width of [390,1440]){
  await page.locator('.nearby-card').first().getByRole('button',{name:'Описание и контакты'}).click();
  await expect(page.getByRole('link',{name:book.phone,exact:true})).toBeVisible();assert.equal(detailsCalls,1);
  await expect(page).not.toHaveURL(/\/account/);
- if(!await page.locator('a[href="#history"]:visible').count())await page.getByRole('link',{name:'Моё',exact:true}).click();
+ await page.getByRole('button',{name:'Закрыть карточку',exact:true}).click();
+ if(!await page.locator('a[href="#history"]:visible').count())await page.getByRole('link',{name:'Профиль',exact:true}).click();
  await page.locator('a[href="#history"]:visible').first().click();
  await expect(page.getByRole('heading',{name:'История',exact:true})).toBeVisible();
  await expect(page.locator('.history-card')).toHaveCount(1);
@@ -106,7 +108,8 @@ try{for(const width of [390,1440]){
  await page.screenshot({path:`${out}/history-${width}.png`,fullPage:true});
  const before=searches.length;await page.getByRole('button',{name:'Повторить поиск',exact:true}).click();
  await expect(page.locator('.nearby-card').first()).toContainText(book.title);
- assert.equal(searches.length,before);
+ assert.equal(searches.length,before+1);
+ assert.equal(searches.at(-1).resume,true);
  assert.equal(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('ng_search_anchor')).point.lat),55.8001);
  reports.push({width,noCategories:true,compactCards:true,locationSent:true,freeRoute:true,filtersCollapsed:true,internetCollapsed:true,freeContacts:true,historyPersists:true,bookmarkPersists:true,replayUsesCurrentLocation:true,geo:'simulated'});
  await context.close();
