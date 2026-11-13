@@ -11,8 +11,7 @@ import './image-fallback.css';
 import './mobile-safe-area.css';
 import './discovery/nearby.css';
 
-const SearchHistory=lazy(()=>import('./search-history'));
-const ProfilePage=lazy(()=>import('./profile-page'));
+const ProfilePage=lazy(()=>import('./profile-sections'));
 const FavoritesPage=lazy(()=>import('./favorites-page'));
 const CatalogApp=lazy(()=>import('./catalog-app'));
 const buyerPages=new Set(['home','search','map','browse','history','my','favorites']);
@@ -21,8 +20,8 @@ export default function BuyerApp({children}:{children?:React.ReactNode}){
  const [page,setPage]=useState('home'),[id,setId]=useState('');
  useEffect(()=>{document.documentElement.dataset.naydiHydrated='true';const change=()=>{const [next,key]=location.hash.slice(1).split('/');setPage(next||'home');setId(decodeURIComponent(key||''));window.scrollTo(0,0);};change();addEventListener('hashchange',change);return()=>{delete document.documentElement.dataset.naydiHydrated;removeEventListener('hashchange',change);};},[]);
  if(!buyerPages.has(page))return <Suspense fallback={<Loading/>}><CatalogApp/></Suspense>;
- const content=page==='history'?<Suspense fallback={<Loading/>}><SearchHistory/></Suspense>:page==='favorites'?<Suspense fallback={<Loading/>}><FavoritesPage/></Suspense>:page==='my'?<Suspense fallback={<Loading/>}><ProfilePage/></Suspense>:<SearchClient page={page} id={id} card={(product,shop)=><CompactProduct product={product} shop={shop}/>}/>;
- const home=page==='home',profile=page==='my';
+ const content=page==='favorites'?<Suspense fallback={<Loading/>}><FavoritesPage/></Suspense>:page==='my'||page==='history'?<Suspense fallback={<Loading/>}><ProfilePage section={page==='history'?'history':id}/></Suspense>:<SearchClient page={page} id={id} card={(product,shop)=><CompactProduct product={product} shop={shop}/>}/>;
+ const home=page==='home',profile=page==='my'||page==='history';
  const current=home||page==='map'||page==='browse'||page==='search'?'Поиск':profile?'Профиль':page==='favorites'?'Избранное':undefined;
  return <div className="design ng-app"><header className={'d-header reference-header v3-header'+(home?' reference-header-home':profile?' reference-header-profile':' reference-header-app')}>
   <div className="header-brand-location"><a className="d-brand" href="#home"><MapPin strokeWidth={3}/><span>Найди<span>Go</span></span></a><div id="buyer-city-slot" className="d-city-slot"/></div>

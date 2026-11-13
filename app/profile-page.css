@@ -31,3 +31,8 @@
  .d-main:has(.profile-layout) { max-width: none; width: 100%; padding: 22px 24px 30px; }
  .profile-layout { max-width: none; grid-template-columns: 270px minmax(0, 1fr); }
 }
+.profile-history,.profile-settings{margin:18px 0;padding:22px;background:#fff;border:1px solid #e4ecf7;border-radius:20px}
+.profile-settings h2{margin:0 0 16px}.profile-settings>a{display:inline-block;margin-top:16px;color:#075edb;font-weight:700}
+.profile-shortcuts{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:850px){.profile-sidebar{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding:8px}.profile-sidebar a{white-space:nowrap;flex:none;padding:10px}.profile-sidebar a small{margin-left:2px}}
+@media(max-width:690px){.profile-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-history,.profile-settings{padding:16px}}

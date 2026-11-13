@@ -12,7 +12,7 @@ export default function SearchHistory({compact=false}:{compact?:boolean}){
  function remove(s:SavedSearch){try{updatePersonal(p=>({...p,history:p.history.filter(x=>x.query!==s.query||x.city!==s.city),searches:p.searches.filter(x=>x.query!==s.query||x.city!==s.city)}));}catch(e){setError((e as Error).message);}}
  if(compact&&!rows.length)return null;
  return <section className={'search-history '+(compact?'history-preview':'')}>
-  {compact?<div className="history-heading"><h2>Недавно искали вы</h2><a href="#history">Вся история</a></div>:<><h1>История</h1><p className="history-note">Сохранено в этом браузере. При повторе обновим предложения от вашей текущей точки.</p></>}
+  {compact?<div className="history-heading"><h2>Недавно искали вы</h2><a href="#my/history">Вся история</a></div>:<><h1>История поиска</h1><p className="history-note">Сохранено в этом браузере. При повторе обновим предложения от вашей текущей точки.</p></>}
   {error&&<p role="alert">{error}</p>}
   {!rows.length&&<p className="history-empty">Здесь появятся ваши поиски с датой и временем.</p>}
   <div className="history-grid">{rows.slice(0,compact?3:100).map(s=><article className="history-card" data-search-key={s.searchKey} key={s.query+'|'+s.city}>
